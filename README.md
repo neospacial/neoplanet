@@ -23,8 +23,6 @@ This dashboard is not an official warning service. Each alert links to the offic
 [Browser: index.html] <- same-origin JSON <- <user>.github.io/<repo>/
 ```
 
-The full design is in [`docs/plan.md`](docs/plan.md). The frozen copy of version 0.3.0 is [`docs/plan-v0.3.0.md`](docs/plan-v0.3.0.md).
-
 ## Widgets
 
 | ID | Widget | Data |
@@ -34,8 +32,8 @@ The full design is in [`docs/plan.md`](docs/plan.md). The frozen copy of version
 | W3 | Kp bars | Planetary Kp in G-level colors, forecast hatched |
 | W4 | Solar wind stack | Bz (southward shaded), Bt, speed, density |
 | W5 | Aurora polar view | OVATION 2 degree grid, both hemispheres, 7-day slider |
-| W6 | World event map | Earthquakes, GDACS, cyclone tracks, EONET, tsunami messages, fire density, night side |
-| W7 | Event list | Sorted by severity, then time. A click shows the event on the map |
+| W6 | World event map | Earthquakes, GDACS, cyclone tracks, EONET, tsunami messages, fire density, night side. Zoom and pan; click or tap an event for its details |
+| W7 | Event list | Sorted by severity, then time. A click shows the event on the map. When the map is zoomed in, the list shows only the events in the map view |
 | W8 | Event timeline | One lane for each event type |
 | W9 | Calendar heat map | Daily maximum Kp, M4.5+ count, fire count |
 | W10 | Climate trend | Full record, 12-month mean, trend line, seasonal overlay |
@@ -44,9 +42,11 @@ The full design is in [`docs/plan.md`](docs/plan.md). The frozen copy of version
 | W13 | Data health | Status, age, size, and budget of each dataset |
 | W14 | Near-Earth objects | Close approaches in lunar distances, Sentry list |
 | W15 | Solar cycle | Sunspot number and F10.7 with the prediction |
-| W16 | Ocean anomaly map | SST or sea level anomaly, Nino 3.4 box, time slider |
+| W16 | Ocean anomaly map | SST or sea level anomaly, Nino 3.4 box, time slider. Zoom and pan |
 
 Presets: Overview (default), Space Weather, Earth Events, Ocean and Climate. Drag the grip to move a widget, drag the corner to resize it, or use Alt + arrow keys (Alt + Shift + arrow keys to resize). Open **Widgets** to add or remove widgets, and to export or import the layout. Drag on the time strip below the header to select a time window. Double-click it to return to live mode.
+
+Maps: scroll the mouse wheel, double-click, or use the + and − buttons to zoom. Drag to pan. On a phone or tablet, pinch with two fingers to zoom and pan; one finger scrolls the page. With the keyboard, select the map and use + and − to zoom, the arrow keys to pan, and 0 to show the whole world. Click or tap an event to show its details and a link to the official source.
 
 ## Setup
 

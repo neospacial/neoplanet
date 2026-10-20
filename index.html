@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; worker-src blob:; img-src 'none'">
-<meta name="version" content="0.6.0">
+<meta name="version" content="0.7.0">
 <meta name="description" content="The state of the planet and near space from public data.">
 <title>Public Data Dashboard</title>
 <style>
@@ -47,6 +47,7 @@ main{display:grid;grid-template-columns:repeat(var(--cols,12),1fr);grid-auto-row
 .info{position:absolute;inset:28px 0 0 0;background:var(--panel);padding:8px 10px;overflow:auto;z-index:2;font-size:12.5px}
 .tip{position:fixed;z-index:20;pointer-events:none;background:var(--panel2);border:1px solid var(--line);padding:4px 6px;border-radius:4px;font-size:11.5px;white-space:nowrap}
 .empty{color:var(--muted);padding:12px}
+.card{position:absolute;left:6px;top:6px;max-width:min(320px,calc(100% - 52px));max-height:calc(100% - 40px);overflow:auto;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;z-index:2;font-size:12px}
 #cat{position:fixed;right:0;top:0;bottom:0;width:min(360px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:10;overflow:auto;padding:10px 12px}
 #cat h2{font-size:14px;margin:4px 0 8px}#cat h3{font-size:12px;color:var(--muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.5px}
 #cat label{display:flex;gap:6px;align-items:center;padding:2px 0}
@@ -63,7 +64,8 @@ td.n,th.n{text-align:right}
 footer{color:var(--muted);font-size:11.5px;padding:10px 12px 20px;border-top:1px solid var(--line)}
 footer a{color:var(--accent)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-@media (max-width:700px){main{--cols:4;gap:6px;padding:6px}header{gap:6px}#sum{width:100%;margin:0}.wh{flex-wrap:wrap}.wv{margin-left:0}}
+@media (max-width:700px){main{--cols:4;gap:6px;padding:6px}header{gap:6px;position:static}#sum{width:100%;margin:0}.wh{flex-wrap:wrap}.wv{margin-left:0}header button,header select{min-height:34px}.card{top:auto;bottom:26px;right:44px;max-width:none;max-height:50%}.wh button{padding:4px 9px}}
+@media (pointer:coarse){.rs{display:none}}
 </style>
 </head>
 <body>
@@ -544,7 +546,7 @@ function cols() { return getComputedStyle($('#grid')).getPropertyValue('--cols')
 function place(w) {
   const c = cols(), ww = w.item.w || w.def.size[0], hh = w.item.h || w.def.size[1];
   w.el.style.gridColumn = 'span ' + (c === 4 ? (ww <= 3 ? 2 : 4) : Math.min(12, ww));
-  w.el.style.gridRow = 'span ' + hh;
+  w.el.style.gridRow = 'span ' + (c === 4 && w.def.type === 'W6' ? Math.min(hh, 4) : hh);
 }
 function buildGrid() {
   const g = $('#grid');
@@ -1058,35 +1060,113 @@ function mark(c, shape, x, y, r, col) {
   else c.rect(x - r * .8, y - r * .8, r * 1.6, r * 1.6);
   c.closePath(); c.fill(); c.stroke();
 }
-function focus(ev) { S.focus = ev; S.hover = ev.t_start; for (const w of W.values()) if (w.def.type === 'W6' || w.def.type === 'W7') load(w); redrawAll(); }
+// ---- map view (W6, W16): zoom and pan. v = {k: zoom, lon, lat: center}.
+// Wheel, drag, two-finger pinch, double-click, the +/- buttons, and keys (+ - 0 arrows). One finger scrolls the page up and down.
+function proj(v, W0, Hh) {
+  const s = Math.min(W0 / 360, Hh / 180) * v.k, mx = Math.max(0, 180 - W0 / 2 / s), my = Math.max(0, 90 - Hh / 2 / s);
+  v.lon = Math.max(-mx, Math.min(mx, v.lon)); v.lat = Math.max(-my, Math.min(my, v.lat));
+  return {s, W0, Hh, X: lon => W0 / 2 + (lon - v.lon) * s, Y: lat => Hh / 2 - (lat - v.lat) * s, lon: x => v.lon + (x - W0 / 2) / s, lat: y => v.lat - (y - Hh / 2) / s};
+}
+function zoomable(w, onChange) {
+  const v = w.v = {k: 1, lon: 0, lat: 0}, cv = w.chart.cv, P = new Map();
+  cv.tabIndex = 0; cv.style.touchAction = 'pan-y'; cv.setAttribute('aria-label', w.def.title + ' map: + and - zoom, arrow keys pan, 0 resets');
+  const xy = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  const done = () => { w.base = w.img2 = null; redraw(w); if (onChange) onChange(); };
+  const zoom = (x, y, f) => { const p = w.p; if (!p) return; const lo = p.lon(x), la = p.lat(y); v.k = Math.max(1, Math.min(48, v.k * f)); const s = Math.min(p.W0 / 360, p.Hh / 180) * v.k; v.lon = lo - (x - p.W0 / 2) / s; v.lat = la + (y - p.Hh / 2) / s; done(); };
+  const pan = (dx, dy) => { if (!w.p) return; v.lon -= dx / w.p.s; v.lat += dy / w.p.s; done(); };
+  w.zoom = zoom;
+  cv.addEventListener('wheel', e => { e.preventDefault(); zoom(...xy(e), e.deltaY < 0 ? 1.3 : 1 / 1.3); }, {passive: false});
+  cv.addEventListener('dblclick', e => zoom(...xy(e), 2));
+  cv.addEventListener('pointerdown', e => { P.set(e.pointerId, xy(e)); w.moved = 0; if (e.pointerType === 'mouse' || P.size === 2) try { cv.setPointerCapture(e.pointerId); } catch (x) { /* not active */ } });
+  cv.addEventListener('pointermove', e => {
+    const old = P.get(e.pointerId); if (!old || (e.pointerType === 'mouse' && !e.buttons)) return;
+    const cur = xy(e);
+    if (P.size === 2) {
+      const o = [...P.entries()].find(([id]) => id !== e.pointerId)[1], d0 = Math.hypot(old[0] - o[0], old[1] - o[1]), d1 = Math.hypot(cur[0] - o[0], cur[1] - o[1]);
+      P.set(e.pointerId, cur); w.moved = 9; if (d0 > 10) zoom((cur[0] + o[0]) / 2, (cur[1] + o[1]) / 2, d1 / d0);
+    } else { P.set(e.pointerId, cur); w.moved += Math.abs(cur[0] - old[0]) + Math.abs(cur[1] - old[1]); pan(cur[0] - old[0], cur[1] - old[1]); }
+  });
+  for (const t of ['pointerup', 'pointercancel']) cv.addEventListener(t, e => P.delete(e.pointerId));
+  cv.addEventListener('keydown', e => {
+    const p = w.p, k = e.key; if (!p) return;
+    if (k === '+' || k === '=') zoom(p.W0 / 2, p.Hh / 2, 1.5); else if (k === '-') zoom(p.W0 / 2, p.Hh / 2, 1 / 1.5);
+    else if (k === '0') { v.k = 1; done(); } else { const d = {ArrowLeft: [40, 0], ArrowRight: [-40, 0], ArrowUp: [0, 40], ArrowDown: [0, -40]}[k]; if (!d) return; pan(...d); }
+    e.preventDefault();
+  });
+  const bs = 'width:30px;height:30px;padding:0;font-size:16px';
+  w.body.append(el('div', {style: 'position:absolute;right:6px;top:6px;display:flex;flex-direction:column;gap:4px;z-index:1'},
+    el('button', {style: bs, 'aria-label': 'Zoom in', onclick: () => w.p && zoom(w.p.W0 / 2, w.p.Hh / 2, 2)}, '+'),
+    el('button', {style: bs, 'aria-label': 'Zoom out', onclick: () => w.p && zoom(w.p.W0 / 2, w.p.Hh / 2, .5)}, '−'),
+    el('button', {style: bs, 'aria-label': 'Show the whole world', onclick: () => { v.k = 1; done(); }}, '⟲')));
+}
+// Draw the coastlines with a projection.
+function drawCoast(c, p, lines) { c.beginPath(); for (const l of lines) for (let i = 0; i < l.length; i += 2) { const x = p.X(l[i]), y = p.Y(l[i + 1]); i && Math.abs(l[i] - l[i - 2]) < 180 ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); }
+// Text for the detail card of an event.
+function evInfo(e) {
+  const x = e.extra || {}, d = e.ds;
+  return d === 'geo.quakes' ? `Magnitude ${fmtNum(e.mag)} ${x.mag_type || ''}, depth ${fmtNum(x.depth_km, 'km')}${x.pager ? ', PAGER ' + x.pager : ''}${x.tsunami ? ', tsunami flag' : ''}`
+    : d === 'weather.ibtracs' || d === 'weather.nhc' ? `Maximum wind ${fmtNum(e.mag, 'kt')}${e.sev ? ', category ' + e.sev : ', tropical storm or weaker'}`
+    : d === 'geo.gdacs' ? `${x.level || ''} alert. ${x.severity || ''} ${x.country || ''}`
+    : d === 'geo.eonet' ? `${x.category || e.type}${e.mag != null ? ', ' + fmtNum(e.mag, x.unit) : ''}`
+    : `${x.category || x.color || ''} ${e.mag != null ? 'M' + fmtNum(e.mag) : ''}`;
+}
+function showCard(w) {
+  if (w.card) w.card.remove();
+  w.card = null;
+  if (!w.sel || !w.sel.length) return;
+  const one = e => el('div', {style: 'margin:4px 0'},
+    el('b', {style: `background:${LYR[e.ds][3](e)};color:#111;padding:0 4px;border-radius:2px;margin-right:4px`}, String(e.sev)), el('b', {}, e.title),
+    el('div', {class: 'wa'}, `${LYR[e.ds][1]} · ${fmtTime(e.t_start)} (${fmtAge(now() - e.t_start)} ago)`),
+    el('div', {}, evInfo(e)), e.url ? el('a', {href: e.url, target: '_blank', rel: 'noopener'}, 'Official source ↗') : '');
+  w.card = el('div', {role: 'dialog', 'aria-label': 'Selected events', class: 'card'},
+    el('button', {style: 'float:right;padding:0 6px', 'aria-label': 'Close', onclick: () => { w.sel = null; S.focus = null; showCard(w); redraw(w); }}, '×'),
+    w.sel.length > 1 ? el('div', {class: 'wa'}, `${w.sel.length} events here`) : '', ...w.sel.slice(0, 8).map(one));
+  w.body.append(w.card);
+}
+// Select an event from the list: center the map on it and show its card.
+function focus(ev) {
+  S.focus = ev; S.hover = ev.t_start;
+  for (const w of W.values()) {
+    if (w.def.type === 'W6' && w.v && ev.lat != null) { w.v.k = Math.max(w.v.k, 4); w.v.lat = ev.lat; w.v.lon = ev.lon > 180 ? ev.lon - 360 : ev.lon; w.sel = [ev]; w.base = null; showCard(w); mapMoved(); }
+    if (w.def.type === 'W7') load(w);
+  }
+  redrawAll();
+}
+// The event list follows the map view when the map is zoomed in.
+let mapT = 0;
+function mapMoved() { clearTimeout(mapT); mapT = setTimeout(() => { for (const w of W.values()) if (w.def.type === 'W7' && w.visible) load(w); }, 300); }
+function mapBox() { const m = [...W.values()].find(w => w.def.type === 'W6' && w.p && w.v.k > 1.01); return m ? [m.p.lon(0), m.p.lat(m.p.Hh), m.p.lon(m.p.W0), m.p.lat(0)] : null; }
 function drawMap(w, c, W0, Hh) {
   if (!w.ev || !w.coast) return;
   Hh -= w.leg.offsetHeight + 4;
-  const Wd = Math.min(W0, Hh * 2), H2 = Wd / 2, ox = (W0 - Wd) / 2, X = lon => ox + (lon + 180) / 360 * Wd, Y = lat => (90 - lat) / 180 * H2;
+  const p = w.p = proj(w.v, W0, Hh), {X, Y} = p;
   if (!w.base || w.base.width !== Math.round(W0 * devicePixelRatio) || w.baseTheme !== COL.panel) {
     const b = w.base = document.createElement('canvas'); b.width = Math.round(W0 * devicePixelRatio); b.height = Math.round(Hh * devicePixelRatio); w.baseTheme = COL.panel;
     const k = b.getContext('2d'); k.scale(devicePixelRatio, devicePixelRatio);
-    k.fillStyle = COL.panel; k.fillRect(ox, 0, Wd, H2);
-    if (w.fire) { const g = w.fire.grid, v = w.fire.snaps[0].v; for (let i = 0; i < g.nlat; i++) for (let j = 0; j < g.nlon; j++) { const n = v[i * g.nlon + j]; if (n > 0) { k.fillStyle = `rgba(255,${Math.max(40, 200 - 50 * Math.log10(n))},0,${Math.min(.9, .25 + .2 * Math.log10(n))})`; const lat = g.lat0 + i * g.d, lon = g.lon0 + j * g.d; k.fillRect(X(lon - g.d / 2), Y(lat + g.d / 2), Wd / g.nlon + .5, H2 / g.nlat + .5); } } }
-    k.strokeStyle = COL.muted; k.lineWidth = .6; k.beginPath();
-    for (const l of w.coast) for (let i = 0; i < l.length; i += 2) { const x = X(l[i]), y = Y(l[i + 1]); i && Math.abs(l[i] - l[i - 2]) < 180 ? k.lineTo(x, y) : k.moveTo(x, y); }
-    k.stroke();
+    k.fillStyle = COL.panel; k.fillRect(X(-180), Y(90), 360 * p.s, 180 * p.s);
+    if (w.fire) { const g = w.fire.grid, v = w.fire.snaps[0].v; for (let i = 0; i < g.nlat; i++) for (let j = 0; j < g.nlon; j++) { const n = v[i * g.nlon + j]; if (n > 0) { k.fillStyle = `rgba(255,${Math.max(40, 200 - 50 * Math.log10(n))},0,${Math.min(.9, .25 + .2 * Math.log10(n))})`; const lat = g.lat0 + i * g.d, lon = g.lon0 + j * g.d; k.fillRect(X(lon - g.d / 2), Y(lat + g.d / 2), g.d * p.s + .5, g.d * p.s + .5); } } }
+    k.strokeStyle = COL.muted; k.lineWidth = .6; drawCoast(k, p, w.coast);
   }
   c.drawImage(w.base, 0, 0, W0, Hh);
+  c.save(); c.beginPath(); c.rect(0, 0, W0, Hh); c.clip();
   // night side: the page calculates the day/night line (plan 7.2)
   const [dec, slon] = sunPos(now()), td = Math.tan(dec * Math.PI / 180) || 1e-6;
   c.fillStyle = 'rgba(0,0,20,.28)'; c.beginPath();
   for (let lon = -180; lon <= 180; lon += 2) c.lineTo(X(lon), Y(Math.atan(-Math.cos((lon - slon) * Math.PI / 180) / td) * 180 / Math.PI));
-  c.lineTo(X(180), dec > 0 ? H2 : 0); c.lineTo(X(-180), dec > 0 ? H2 : 0); c.fill();
+  c.lineTo(X(180), Y(dec > 0 ? -90 : 90)); c.lineTo(X(-180), Y(dec > 0 ? -90 : 90)); c.fill();
   w.pts = [];
+  const zr = 1 + Math.log2(w.v.k) * .25, sel = new Set((w.sel || []).map(e => e.id));
   for (const e of w.ev) {
     const L = LYR[e.ds]; if (e.lat == null || w.off[e.ds]) continue;
     if (e.extra && e.extra.track) { c.strokeStyle = L[3](e); c.lineWidth = 1.2; c.beginPath(); e.extra.track.forEach(([, la, lo], i) => { lo = lo > 180 ? lo - 360 : lo; i ? c.lineTo(X(lo), Y(la)) : c.moveTo(X(lo), Y(la)); }); c.stroke(); }
-    const x = X(e.lon > 180 ? e.lon - 360 : e.lon), y = Y(e.lat), r = e.ds === 'geo.quakes' ? Math.max(1.5, (e.mag - 2) * 1.6) : 4 + e.sev;
-    mark(c, L[2], x, y, r, L[3](e)); w.pts.push([x, y, e]);
-    if (S.focus && S.focus.id === e.id) { c.strokeStyle = COL.accent; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r + 6, 0, 7); c.stroke(); }
+    const x = X(e.lon > 180 ? e.lon - 360 : e.lon), y = Y(e.lat), r = (e.ds === 'geo.quakes' ? Math.max(1.5, (e.mag - 2) * 1.6) : 4 + e.sev) * zr;
+    mark(c, L[2], x, y, r, L[3](e)); w.pts.push([x, y, e, r]);
+    if (sel.has(e.id)) { c.strokeStyle = COL.accent; c.lineWidth = 2.5; c.beginPath(); c.arc(x, y, r + 6, 0, 7); c.stroke(); }
   }
+  c.restore();
 }
+// Events under a point. A touch gets a larger target.
+const hits = (w, x, y, tol) => (w.pts || []).filter(q => Math.hypot(q[0] - x, q[1] - y) < q[3] + tol).map(q => q[2]);
 Object.assign(DEFS, {
   map: {type: 'W6', title: 'World events', ds: ['geo.quakes'], size: [12, 5], pane: true,
     info: 'Earthquakes (circle size by magnitude, PAGER colors), GDACS alerts (triangles), cyclone tracks (Saffir-Simpson colors), EONET events (diamonds), tsunami messages (squares), and fire density from VIIRS (1 degree cells). The shaded part is night. Click a layer name to hide it. The USGS volcano list has no coordinates; see the event list.'},
@@ -1101,10 +1181,12 @@ Object.assign(RENDER, {
   async W6(w) {
     if (!w.chart) {
       w.off = {}; w.chart = new Pane(w.body, (c, W0, Hh) => drawMap(w, c, W0, Hh)); ro.observe(w.body);
-      w.chart.cv.addEventListener('pointermove', ev => { const r = w.chart.cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top; const p = (w.pts || []).find(q => Math.hypot(q[0] - x, q[1] - y) < 7); const tip = $('#tip'); tip.hidden = !p; if (p) { tip.textContent = `${p[2].title} · ${fmtTime(p[2].t_start)} · sev ${p[2].sev}`; tip.style.left = ev.clientX + 12 + 'px'; tip.style.top = ev.clientY + 12 + 'px'; } });
-      w.chart.cv.addEventListener('pointerleave', () => { $('#tip').hidden = true; });
-      w.chart.cv.addEventListener('click', ev => { const r = w.chart.cv.getBoundingClientRect(); const p = (w.pts || []).find(q => Math.hypot(q[0] - ev.clientX + r.left, q[1] - ev.clientY + r.top) < 7); if (p) focus(p[2]); });
-      w.leg = el('div', {style: 'position:absolute;left:6px;bottom:2px;font-size:11px;display:flex;flex-wrap:wrap;gap:2px 8px'}); w.body.append(w.leg);
+      zoomable(w, mapMoved);
+      const cv = w.chart.cv, at = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+      cv.addEventListener('pointermove', ev => { if (ev.buttons || ev.pointerType !== 'mouse') return; const h = hits(w, ...at(ev), 3), tip = $('#tip'); tip.hidden = !h.length; cv.style.cursor = h.length ? 'pointer' : 'grab'; if (h.length) { tip.textContent = h.length > 1 ? `${h.length} events: click to show` : `${h[0].title} · ${fmtTime(h[0].t_start)}`; tip.style.left = ev.clientX + 12 + 'px'; tip.style.top = ev.clientY + 12 + 'px'; } });
+      cv.addEventListener('pointerleave', () => { $('#tip').hidden = true; });
+      cv.addEventListener('click', ev => { if (w.moved > 6) return; const h = hits(w, ...at(ev), ev.pointerType === 'mouse' ? 3 : 12); w.sel = h; S.focus = h[0] || null; $('#tip').hidden = true; showCard(w); redraw(w); for (const x of W.values()) if (x.def.type === 'W7') load(x); });
+      w.leg = el('div', {style: 'position:absolute;left:6px;right:44px;bottom:2px;font-size:11px;display:flex;gap:2px 8px;overflow-x:auto;white-space:nowrap'}); w.body.append(w.leg);
     }
     const [a, b] = window_();
     w.coast = await coast();
@@ -1117,14 +1199,17 @@ Object.assign(RENDER, {
     redraw(w);
   },
   async W7(w) {
-    const [a, b] = window_(), list = (await allEvents(a, b)).slice(0, 150);
+    const [a, b] = window_(), box = mapBox();
+    let list = await allEvents(a, b);
+    if (box) list = list.filter(e => e.lat != null && e.lat >= box[1] && e.lat <= box[3] && (e.lon > 180 ? e.lon - 360 : e.lon) >= box[0] && (e.lon > 180 ? e.lon - 360 : e.lon) <= box[2]);
+    list = list.slice(0, 150);
     w.body.textContent = '';
     const rows = list.map(e => el('tr', {tabindex: '0', style: 'cursor:pointer' + (S.focus && S.focus.id === e.id ? ';background:var(--panel2)' : ''), onclick: () => focus(e), onkeydown: k => { if (k.key === 'Enter') focus(e); }},
       el('td', {}, el('b', {style: `background:${LYR[e.ds][3](e)};color:#111;padding:0 4px;border-radius:2px`}, String(e.sev))),
       el('td', {class: 'wa'}, LYR[e.ds][1]), el('td', {style: 'white-space:normal'}, e.title, ' ', e.url ? el('a', {href: e.url, target: '_blank', rel: 'noopener', onclick: k => k.stopPropagation()}, '↗') : ''),
       el('td', {class: 'n wa'}, fmtTime(e.t_start))));
     w.body.append(el('div', {class: 'scroll'}, el('table', {}, el('tbody', {}, ...rows))));
-    setHeader(w, `${list.length} events`, null, null); w.badge.textContent = ''; w.foot.textContent = 'USGS, GDACS (EC JRC, UN OCHA), NASA EONET, NOAA NHC, NCEI IBTrACS, NWS TWC';
+    setHeader(w, `${list.length} events${box ? ' in map view' : ''}`, null, null); w.badge.textContent = ''; w.foot.textContent = 'USGS, GDACS (EC JRC, UN OCHA), NASA EONET, NOAA NHC, NCEI IBTrACS, NWS TWC';
   },
   async W8(w) {
     if (!w.chart) { w.chart = new Pane(w.body, (c, W0, Hh) => drawTimeline(w, c, W0, Hh)); ro.observe(w.body); }
@@ -1215,10 +1300,11 @@ Object.assign(RENDER, {
   },
   async W16(w) {
     if (!w.chart) {
-      w.v = OCEAN.find(o => hasData(o[0]))[0]; w.chart = new Pane(w.body, (c, W0, Hh) => drawOcean(w, c, W0, Hh)); ro.observe(w.body);
+      w.ov = OCEAN.find(o => hasData(o[0]))[0]; w.chart = new Pane(w.body, (c, W0, Hh) => drawOcean(w, c, W0, Hh)); ro.observe(w.body);
+      zoomable(w);
       w.bar = el('div', {style: 'position:absolute;left:8px;right:8px;bottom:2px;display:flex;gap:6px;align-items:center'}); w.body.append(w.bar);
     }
-    const e = entry(w.v);
+    const e = entry(w.ov);
     w.list = [...((e.files.w1 || []).map(k => ['w1', k])), ...e.files.root.filter(k => /^\d{4}-\d\d-\d\d$/.test(k)).map(k => ['root', k])].sort((p, q) => p[1] < q[1] ? -1 : 1);
     if (w.idx == null || w.idx >= w.list.length) w.idx = w.list.length - 1;
     const [tier, key] = w.list[w.idx];
@@ -1227,20 +1313,21 @@ Object.assign(RENDER, {
     const sl = el('input', {type: 'range', min: 0, max: w.list.length - 1, value: w.idx, style: 'flex:1', 'aria-label': 'Map date'});
     sl.onchange = () => { w.idx = +sl.value; load(w); };
     w.bar.textContent = '';
-    for (const [id, lab] of OCEAN) if (hasData(id)) w.bar.append(el('button', {'aria-pressed': String(id === w.v), onclick: () => { w.v = id; w.idx = null; load(w); }}, lab));
+    for (const [id, lab] of OCEAN) if (hasData(id)) w.bar.append(el('button', {'aria-pressed': String(id === w.ov), onclick: () => { w.ov = id; w.idx = null; load(w); }}, lab));
     w.bar.append(sl, el('span', {class: 'wa'}, (tier === 'w1' ? 'week of ' : '') + key));
-    const t = w.g.snaps[0].t, d = await loadSeries(w.v, ['global_mean', 'nino34_mean'], t - 4 * D, t + 4 * D, 100, 'r').catch(() => null);
+    const t = w.g.snaps[0].t, d = await loadSeries(w.ov, ['global_mean', 'nino34_mean'], t - 4 * D, t + 4 * D, 100, 'r').catch(() => null);
     const gm = d && nearest(d.cols.global_mean, common_day(t), 2 * D), n34 = d && nearest(d.cols.nino34_mean, common_day(t), 2 * D);
-    const u = (await meta(w.v)).unit;
-    setHeader(w, [gm === gm && gm != null ? `global ${fmtNum(gm, u)}` : '', n34 === n34 && n34 != null ? `Nino 3.4 ${fmtNum(n34, u)}` : ''].filter(Boolean).join(' · '), entry(w.v).newest, w.v);
+    const u = (await meta(w.ov)).unit;
+    setHeader(w, [gm === gm && gm != null ? `global ${fmtNum(gm, u)}` : '', n34 === n34 && n34 != null ? `Nino 3.4 ${fmtNum(n34, u)}` : ''].filter(Boolean).join(' · '), entry(w.ov).newest, w.ov);
     redraw(w);
   },
 });
 const common_day = t => t - t % D;
 function drawOcean(w, c, W0, Hh) {
   if (!w.g || !w.coast) return;
-  const g = w.g.grid, v = w.g.snaps[0].v, rng = OCEAN.find(o => o[0] === w.v)[2], div = w.v !== 'ocean.coral-alert';
-  const Wd = Math.min(W0, (Hh - 26) * 2), H2 = Wd / 2, ox = (W0 - Wd) / 2, X = lon => ox + (lon + 180) / 360 * Wd, Y = lat => (90 - lat) / 180 * H2;
+  const g = w.g.grid, v = w.g.snaps[0].v, rng = OCEAN.find(o => o[0] === w.ov)[2], div = w.ov !== 'ocean.coral-alert';
+  Hh -= 28;
+  const p = w.p = proj(w.v, W0, Hh), {X, Y} = p;
   if (!w.img) {
     w.img = document.createElement('canvas'); w.img.width = g.nlon; w.img.height = g.nlat;
     const k = w.img.getContext('2d'), im = k.createImageData(g.nlon, g.nlat);
@@ -1251,16 +1338,16 @@ function drawOcean(w, c, W0, Hh) {
     }
     k.putImageData(im, 0, 0);
   }
-  c.imageSmoothingEnabled = false; c.drawImage(w.img, X(g.lon0 - g.d / 2), Y(g.lat0 + (g.nlat - .5) * g.d), Wd * g.nlon * g.d / 360, H2 * g.nlat * g.d / 180);
-  c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = .6; c.beginPath();
-  for (const l of w.coast) for (let i = 0; i < l.length; i += 2) { const x = X(l[i]), y = Y(l[i + 1]); i && Math.abs(l[i] - l[i - 2]) < 180 ? c.lineTo(x, y) : c.moveTo(x, y); }
-  c.stroke();
-  if (w.v === 'ocean.sst-anom') { c.strokeStyle = '#111'; c.lineWidth = 1.5; c.setLineDash([3, 2]); c.strokeRect(X(-170), Y(5), X(-120) - X(-170), Y(-5) - Y(5)); c.setLineDash([]); }
+  c.save(); c.beginPath(); c.rect(0, 0, W0, Hh); c.clip();
+  c.imageSmoothingEnabled = false; c.drawImage(w.img, X(g.lon0 - g.d / 2), Y(g.lat0 + (g.nlat - .5) * g.d), g.nlon * g.d * p.s, g.nlat * g.d * p.s);
+  c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = .6; drawCoast(c, p, w.coast);
+  if (w.ov === 'ocean.sst-anom') { c.strokeStyle = '#111'; c.lineWidth = 1.5; c.setLineDash([3, 2]); c.strokeRect(X(-170), Y(5), X(-120) - X(-170), Y(-5) - Y(5)); c.setLineDash([]); }
+  c.restore();
   // color bar
   c.font = '10.5px ' + getComputedStyle(document.body).fontFamily; c.textBaseline = 'middle';
-  for (let i = 0; i < 100; i++) { const [r, gg, b] = rdbu(div ? i / 99 : .5 + i / 198); c.fillStyle = `rgb(${r},${gg},${b})`; c.fillRect(ox + Wd - 110 + i, H2 - 12, 1, 8); }
-  const u = w.v === 'ocean.sla' ? ' m' : w.v === 'ocean.sst-anom' ? ' °C' : '';
-  c.fillStyle = COL.text; c.textAlign = 'right'; c.fillText(div ? -rng + u : '0', ox + Wd - 113, H2 - 8); c.textAlign = 'left'; c.fillText(rng + u, ox + Wd - 8, H2 - 18);
+  for (let i = 0; i < 100; i++) { const [r, gg, b] = rdbu(div ? i / 99 : .5 + i / 198); c.fillStyle = `rgb(${r},${gg},${b})`; c.fillRect(W0 - 150 + i, Hh - 12, 1, 8); }
+  const u = w.ov === 'ocean.sla' ? ' m' : w.ov === 'ocean.sst-anom' ? ' °C' : '';
+  c.fillStyle = COL.text; c.textAlign = 'right'; c.fillText(div ? -rng + u : '0', W0 - 153, Hh - 8); c.textAlign = 'left'; c.fillText(rng + u, W0 - 48, Hh - 8);
 }
 
 // ---------------------------------------------------------------- catalog, controls
