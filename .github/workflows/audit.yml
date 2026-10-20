@@ -1,0 +1,51 @@
+# Phase 0 endpoint audit. Version 0.1.1.
+# Manual run only. It does not commit or deploy anything.
+# Actions > "audit" > Run workflow.
+name: audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Only endpoint IDs that start with these prefixes (comma-separated). Blank = all."
+        required: false
+        default: ""
+      pages_url:
+        description: "Optional: URL of a JSON file on your GitHub Pages site (gzip and cache check)."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run audit
+        env:
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+          ONLY: ${{ inputs.only }}
+          PAGES_URL: ${{ inputs.pages_url }}
+        run: |
+          python3 --version
+          python3 tools/audit/audit.py --out audit-out --only "$ONLY" --pages-check "$PAGES_URL"
+
+      - name: Add report to the run summary
+        if: always()
+        run: |
+          if [ -f audit-out/report.md ]; then
+            head -c 900000 audit-out/report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload report and samples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase0-audit
+          path: audit-out
+          retention-days: 30

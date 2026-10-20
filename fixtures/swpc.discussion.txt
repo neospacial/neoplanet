@@ -1,0 +1,71 @@
+:Product: Forecast Discussion
+:Issued: 2026 Oct 20 1230 UTC
+# Prepared by the U.S. Dept. of Commerce, NOAA, Space Weather Prediction Center
+#
+Solar Activity
+
+.24 hr Summary...
+Solar activity returned to low levels, with the largest flare of the
+period being a C3.5/Sf at 20/0245 UTC from Region 4557 (No6W33,
+Cai/beta), which produced the majority of the activity this period as
+new flux continued to emerge and consolidate. Despite Region 4551
+(S15W63, Eko/beta-gamma) being relatively stable this period, it still
+produced a few smaller flares earlier in the period, as did Region 4559
+(S20W60, Bxo/beta) which re-developed spots this period. Region 4560
+(N13W06, Dri/beta) showed some new emergence in its intermediate area
+while being quiet throughout the period.
+
+No Earth-directed CMEs were observed in the available coronagraph
+imagery.
+
+.Forecast...
+Solar activity is expected to be at low levels through 22 Oct, with a
+chance (25%) for M-class flares (R1-R2, Minor-Moderate) due primarily to
+the flare potential of Regions 4551 and 4557.
+
+Energetic Particle
+
+.24 hr Summary...
+The greater than 2 MeV electron flux was at normal to moderate levels.
+The greater than 10 MeV proton flux was at background levels.
+
+.Forecast...
+The greater than 2 MeV electron flux is expected to remain at normal to
+moderate levels through 22 Oct. The greater than 10 MeV proton flux is
+expected to continue at background levels, with no S1 (Minor) solar
+radiation storms expected through 22 Oct.
+
+Solar Wind
+
+.24 hr Summary...
+Solar wind parameters were at near background levels for most of the
+period: total magnetic field (Bt) averaged 5 nT, with the Bz
+(north-south) component mostly positive before 20/0000z and variable
+afterwards, and solar wind speeds decreasing from ~375 km/s to ~315
+km/s.
+
+After approximately 20/0600 UTC, the interplanetary magnetic field
+started gradually enhancing, reaching a max of 9 nT at 20/1150 UTC with
+Bz reaching a max southward deflection of 6 nT at 20/0740 UTC then
+flipping sharply northward. Wind speeds also began slowly increasing,
+ending the period at approximately 355 km/s.
+
+Phi angle was predominantly oriented in the negative sector during the
+first half of the period and largely positive in the second.
+
+.Forecast...
+Solar wind conditions are expected to encounter weak enhancements on 20
+Oct as the anticipated influences of a positive polarity CH HSS arrive.
+Elevated conditions are likely to persist through 21 Oct before
+beginning to ease by 22 Oct.
+
+Geospace
+
+.24 hr Summary...
+The geomagnetic field was at quiet levels over the past 24h.
+
+.Forecast...
+The geomagnetic field is likely to reach G1 (Minor) geomagnetic storm
+levels late on 20 Oct due to anticipated effects from a positive
+polarity CH HSS. Active conditions are likely on 21 Oct, followed by
+mostly unsettled conditions on 22 Oct as HSS effects wane.

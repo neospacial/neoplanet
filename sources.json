@@ -1,0 +1,1676 @@
+{
+ "version": "0.3.0",
+ "generated": "2026-10-20",
+ "notes": [
+  "Machine form of plan v0.3.0 section 8. One entry for each dataset.",
+  "Placeholders in url: {NASA_API_KEY} {FIRMS_MAP_KEY} (from GitHub Secrets, see plan 10.4), {D0} today, {D-7}, {D-30}, {Y} this year (UTC), {OBS} observatory, {STATION} DART station.",
+  "status: ok = verified 2026-10-20; key = needs a secret, uses key_fallback until then; runner = not reachable from the audit workspace, test on the runner.",
+  "rules: letters refer to plan 9.4 (a retry on parse error, b hash change detection, c active spacecraft filter, d DART station selection, e freshness by dataset, f forecast rows, g empty list is valid).",
+  "retention keys: r raw, m5 5-minute, h1 hourly, d1 daily, w1 weekly, snap grid snapshots, events event window, record full record, latest newest issue only.",
+  "budget_mb: raw MB for all tiers of the dataset. The run warns at 2 x budget."
+ ],
+ "user_agent": "public-data-dashboard/{VERSION} (+{REPO_URL})",
+ "budget_total_mb": 150,
+ "hard_stop_mb": 300,
+ "datasets": [
+  {
+   "id": "space.scales",
+   "title": "NOAA space weather scales R/S/G",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/products/noaa-scales.json",
+   "adapter": "swpc_scales",
+   "kind": "record",
+   "class": "B",
+   "retention": {
+    "r": "2y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.scales.json",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 1,
+   "budget_mb": 0.3
+  },
+  {
+   "id": "space.alerts",
+   "title": "SWPC alerts, watches, warnings",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/products/alerts.json",
+   "adapter": "swpc_alerts",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "1y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.alerts.json",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 7,
+   "budget_mb": 0.5
+  },
+  {
+   "id": "space.kp",
+   "title": "Planetary Kp (3 h)",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
+   "adapter": "swpc_table",
+   "kind": "series",
+   "class": "B",
+   "retention": {
+    "r": "2y",
+    "d1": "5y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.kp.json",
+   "rules": [],
+   "sunset": null,
+   "dt": 10800,
+   "max_age_days": 1,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "space.kp-1m",
+   "title": "Estimated Kp (1 min)",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json",
+   "adapter": "swpc_records",
+   "kind": "series",
+   "class": "A",
+   "retention": {
+    "r": "7d"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.kp-1m.json",
+   "rules": [],
+   "sunset": null,
+   "dt": 60,
+   "max_age_days": 1,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "space.kp-forecast",
+   "title": "Kp forecast",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json",
+   "adapter": "swpc_table",
+   "kind": "forecast",
+   "class": "latest",
+   "retention": {
+    "latest": true
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.kp-forecast.json",
+   "rules": [
+    "f"
+   ],
+   "sunset": null,
+   "budget_mb": 0.05
+  },
+  {
+   "id": "space.xray",
+   "title": "GOES X-ray flux (2 channels)",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/json/goes/primary/xrays-1-day.json",
+   "adapter": "swpc_goes",
+   "kind": "series",
+   "class": "A",
+   "retention": {
+    "r": "7d",
+    "m5": "30d",
+    "h1": "1y",
+    "d1": "5y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.xray-1d.json",
+   "rules": [
+    "a"
+   ],
+   "sunset": null,
+   "backfill_url": "https://services.swpc.noaa.gov/json/goes/primary/xrays-7-day.json",
+   "dt": 60,
+   "channels": "energy",
+   "value": "flux",
+   "quant": "log10",
+   "max_age_days": 1,
+   "budget_mb": 1.0
+  },
+  {
+   "id": "space.xray-flares",
+   "title": "GOES X-ray flare list",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://services.swpc.noaa.gov/json/goes/primary/xray-flares-7-day.json",
+   "adapter": "swpc_flares",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.xray-flares-7d.json",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 7,
+   "budget_mb": 1.5
+  },
+  {
+   "id": "space.protons",
+   "title": "GOES integral protons (5 min)",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/json/goes/primary/integral-protons-1-day.json",
+   "adapter": "swpc_goes",
+   "kind": "series",
+   "class": "A",
+   "retention": {
+    "r": "7d",
+    "m5": "30d",
+    "h1": "1y",
+    "d1": "5y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.protons-1d.json",
+   "rules": [
+    "a"
+   ],
+   "sunset": null,
+   "backfill_url": "https://services.swpc.noaa.gov/json/goes/primary/integral-protons-7-day.json",
+   "dt": 300,
+   "channels": "energy",
+   "value": "flux",
+   "quant": "log10",
+   "max_age_days": 1,
+   "budget_mb": 0.5
+  },
+  {
+   "id": "space.electrons",
+   "title": "GOES integral electrons (5 min)",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/json/goes/primary/integral-electrons-1-day.json",
+   "adapter": "swpc_goes",
+   "kind": "series",
+   "class": "A",
+   "retention": {
+    "r": "7d",
+    "m5": "30d",
+    "h1": "1y",
+    "d1": "5y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.electrons-1d.json",
+   "rules": [
+    "a"
+   ],
+   "sunset": null,
+   "backfill_url": "https://services.swpc.noaa.gov/json/goes/primary/integral-electrons-7-day.json",
+   "dt": 300,
+   "channels": "energy",
+   "value": "flux",
+   "quant": "log10",
+   "max_age_days": 1,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "space.goes-mag",
+   "title": "GOES magnetometer (1 min)",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/json/goes/primary/magnetometers-1-day.json",
+   "adapter": "swpc_goes",
+   "kind": "series",
+   "class": "A",
+   "retention": {
+    "r": "7d",
+    "m5": "30d",
+    "h1": "1y",
+    "d1": "5y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.magnetometers-1d.json",
+   "rules": [
+    "a"
+   ],
+   "sunset": null,
+   "backfill_url": "https://services.swpc.noaa.gov/json/goes/primary/magnetometers-7-day.json",
+   "dt": 60,
+   "max_age_days": 1,
+   "budget_mb": 0.5
+  },
+  {
+   "id": "space.sw-plasma",
+   "title": "Solar wind plasma (1 min): speed, density, temperature",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json",
+   "adapter": "swpc_rtsw",
+   "kind": "series",
+   "class": "A",
+   "retention": {
+    "r": "7d",
+    "m5": "30d",
+    "h1": "1y",
+    "d1": "5y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.rtsw-wind-1m.json",
+   "rules": [
+    "a",
+    "c"
+   ],
+   "sunset": null,
+   "dt": 60,
+   "columns": [
+    "proton_speed",
+    "proton_density",
+    "proton_temperature"
+   ],
+   "max_age_days": 1,
+   "budget_mb": 1.0
+  },
+  {
+   "id": "space.sw-mag",
+   "title": "Solar wind magnetic field (1 min): Bt, Bx, By, Bz GSM",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json",
+   "adapter": "swpc_rtsw",
+   "kind": "series",
+   "class": "A",
+   "retention": {
+    "r": "7d",
+    "m5": "30d",
+    "h1": "1y",
+    "d1": "5y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.rtsw-mag-1m.json",
+   "rules": [
+    "a",
+    "c"
+   ],
+   "sunset": null,
+   "dt": 60,
+   "columns": [
+    "bt",
+    "bx_gsm",
+    "by_gsm",
+    "bz_gsm"
+   ],
+   "max_age_days": 1,
+   "budget_mb": 1.0
+  },
+  {
+   "id": "space.aurora",
+   "title": "OVATION aurora probability grid",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json",
+   "adapter": "swpc_ovation",
+   "kind": "grid",
+   "class": "C",
+   "retention": {
+    "snap": "7d",
+    "snap_every": "1h",
+    "d1_peak": "90d"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.ovation.json",
+   "rules": [
+    "a"
+   ],
+   "sunset": null,
+   "grid": {
+    "deg": 2,
+    "aggregate": "max"
+   },
+   "max_age_days": 1,
+   "budget_mb": 7.5
+  },
+  {
+   "id": "space.hemi-power",
+   "title": "Aurora hemispheric power",
+   "domain": "space",
+   "tier": "30m",
+   "url": "https://services.swpc.noaa.gov/text/aurora-nowcast-hemi-power.txt",
+   "adapter": "swpc_hemi_power",
+   "kind": "series",
+   "class": "B",
+   "retention": {
+    "r": "2y",
+    "d1": "5y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.hemi-power.txt",
+   "rules": [],
+   "sunset": null,
+   "dt": 300,
+   "max_age_days": 1,
+   "budget_mb": 2.5
+  },
+  {
+   "id": "space.dst",
+   "title": "Dst index (WDC Kyoto via SWPC)",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://services.swpc.noaa.gov/products/kyoto-dst.json",
+   "adapter": "swpc_table",
+   "kind": "series",
+   "class": "B",
+   "retention": {
+    "r": "2y",
+    "d1": "5y"
+   },
+   "attribution": "WDC for Geomagnetism, Kyoto (via NOAA SWPC)",
+   "license": "WDC Kyoto: non-commercial use, attribution required",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.dst.json",
+   "rules": [],
+   "sunset": null,
+   "dt": 3600,
+   "max_age_days": 2,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "space.enlil",
+   "title": "WSA-Enlil solar wind prediction",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://services.swpc.noaa.gov/json/enlil_time_series.json",
+   "adapter": "swpc_records",
+   "kind": "forecast",
+   "class": "latest",
+   "retention": {
+    "latest": true
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.enlil.json",
+   "rules": [
+    "f"
+   ],
+   "sunset": null,
+   "budget_mb": 0.3
+  },
+  {
+   "id": "space.3day-forecast",
+   "title": "3-day forecast (text)",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://services.swpc.noaa.gov/text/3-day-forecast.txt",
+   "adapter": "swpc_text",
+   "kind": "text",
+   "class": "F",
+   "retention": {
+    "text": "90d"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.3day-forecast.txt",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 2,
+   "budget_mb": 0.5
+  },
+  {
+   "id": "space.discussion",
+   "title": "Forecast discussion (text)",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://services.swpc.noaa.gov/text/discussion.txt",
+   "adapter": "swpc_text",
+   "kind": "text",
+   "class": "F",
+   "retention": {
+    "text": "90d"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.discussion.txt",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 2,
+   "budget_mb": 0.6
+  },
+  {
+   "id": "space.27day",
+   "title": "27-day outlook (text)",
+   "domain": "space",
+   "tier": "1d",
+   "url": "https://services.swpc.noaa.gov/text/27-day-outlook.txt",
+   "adapter": "swpc_text",
+   "kind": "text",
+   "class": "F",
+   "retention": {
+    "text": "90d"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.27day-outlook.txt",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 10,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "space.f107",
+   "title": "F10.7 cm solar radio flux",
+   "domain": "space",
+   "tier": "1d",
+   "url": "https://services.swpc.noaa.gov/products/10cm-flux-30-day.json",
+   "adapter": "swpc_table",
+   "kind": "series",
+   "class": "B",
+   "retention": {
+    "r": "2y",
+    "d1": "5y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.f107-30d.json",
+   "rules": [],
+   "sunset": null,
+   "dt": 86400,
+   "max_age_days": 3,
+   "budget_mb": 0.05
+  },
+  {
+   "id": "space.45day",
+   "title": "45-day Ap and F10.7 forecast",
+   "domain": "space",
+   "tier": "1d",
+   "url": "https://services.swpc.noaa.gov/json/45-day-forecast.json",
+   "adapter": "swpc_45day",
+   "kind": "forecast",
+   "class": "latest",
+   "retention": {
+    "latest": true
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.45day-json.json",
+   "rules": [
+    "f"
+   ],
+   "sunset": null,
+   "budget_mb": 0.02
+  },
+  {
+   "id": "space.flare-prob",
+   "title": "Flare and proton event probabilities",
+   "domain": "space",
+   "tier": "1d",
+   "url": "https://services.swpc.noaa.gov/json/solar_probabilities.json",
+   "adapter": "swpc_records",
+   "kind": "record",
+   "class": "latest",
+   "retention": {
+    "latest": true
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.solar-probabilities.json",
+   "rules": [],
+   "sunset": null,
+   "budget_mb": 0.02
+  },
+  {
+   "id": "space.solar-regions",
+   "title": "Solar active regions",
+   "domain": "space",
+   "tier": "1d",
+   "url": "https://services.swpc.noaa.gov/json/solar_regions.json",
+   "adapter": "swpc_records",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.solar-regions.json",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 3,
+   "budget_mb": 1.0
+  },
+  {
+   "id": "space.cycle-observed",
+   "title": "Solar cycle observed indices (monthly)",
+   "domain": "space",
+   "tier": "1w",
+   "url": "https://services.swpc.noaa.gov/json/solar-cycle/observed-solar-cycle-indices.json",
+   "adapter": "swpc_records",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.cycle-observed.json",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 60,
+   "budget_mb": 0.3
+  },
+  {
+   "id": "space.cycle-predicted",
+   "title": "Solar cycle prediction",
+   "domain": "space",
+   "tier": "1w",
+   "url": "https://services.swpc.noaa.gov/json/solar-cycle/predicted-solar-cycle.json",
+   "adapter": "swpc_records",
+   "kind": "forecast",
+   "class": "latest",
+   "retention": {
+    "latest": true
+   },
+   "attribution": "NOAA SWPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/swpc.cycle-predicted.json",
+   "rules": [
+    "f"
+   ],
+   "sunset": null,
+   "budget_mb": 0.02
+  },
+  {
+   "id": "space.donki-cme",
+   "title": "NASA DONKI CME",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://api.nasa.gov/DONKI/CME?startDate={D-30}&endDate={D0}&api_key={NASA_API_KEY}",
+   "adapter": "nasa_donki",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "NASA CCMC DONKI",
+   "license": "US Government work",
+   "key_secret": "NASA_API_KEY",
+   "status": "key",
+   "fixture": null,
+   "rules": [],
+   "sunset": null,
+   "key_fallback": "DEMO_KEY",
+   "max_age_days": 14,
+   "budget_mb": 0.5
+  },
+  {
+   "id": "space.donki-flr",
+   "title": "NASA DONKI FLR",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://api.nasa.gov/DONKI/FLR?startDate={D-30}&endDate={D0}&api_key={NASA_API_KEY}",
+   "adapter": "nasa_donki",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "NASA CCMC DONKI",
+   "license": "US Government work",
+   "key_secret": "NASA_API_KEY",
+   "status": "key",
+   "fixture": null,
+   "rules": [],
+   "sunset": null,
+   "key_fallback": "DEMO_KEY",
+   "max_age_days": 14,
+   "budget_mb": 0.5
+  },
+  {
+   "id": "space.donki-gst",
+   "title": "NASA DONKI GST",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://api.nasa.gov/DONKI/GST?startDate={D-30}&endDate={D0}&api_key={NASA_API_KEY}",
+   "adapter": "nasa_donki",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "NASA CCMC DONKI",
+   "license": "US Government work",
+   "key_secret": "NASA_API_KEY",
+   "status": "key",
+   "fixture": null,
+   "rules": [],
+   "sunset": null,
+   "key_fallback": "DEMO_KEY",
+   "max_age_days": 14,
+   "budget_mb": 0.5
+  },
+  {
+   "id": "space.donki-notifications",
+   "title": "NASA DONKI notifications",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://api.nasa.gov/DONKI/notifications?startDate={D-7}&endDate={D0}&type=all&api_key={NASA_API_KEY}",
+   "adapter": "nasa_donki",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "1y"
+   },
+   "attribution": "NASA CCMC DONKI",
+   "license": "US Government work",
+   "key_secret": "NASA_API_KEY",
+   "status": "key",
+   "fixture": null,
+   "rules": [],
+   "sunset": null,
+   "key_fallback": "DEMO_KEY",
+   "max_age_days": 14,
+   "budget_mb": 0.5
+  },
+  {
+   "id": "space.neo-cad",
+   "title": "NEO close approaches (next 60 days, < 0.05 au)",
+   "domain": "space",
+   "tier": "1d",
+   "url": "https://ssd-api.jpl.nasa.gov/cad.api?date-min=now&date-max=%2B60&dist-max=0.05&diameter=true",
+   "adapter": "jpl_cad",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "window": "-30d..+60d"
+   },
+   "attribution": "NASA JPL CNEOS",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/jpl.cad.json",
+   "rules": [
+    "b"
+   ],
+   "sunset": null,
+   "max_age_days": 3,
+   "budget_mb": 0.1
+  },
+  {
+   "id": "space.fireballs",
+   "title": "Fireballs",
+   "domain": "space",
+   "tier": "1d",
+   "url": "https://ssd-api.jpl.nasa.gov/fireball.api",
+   "adapter": "jpl_fireball",
+   "kind": "events",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NASA JPL CNEOS",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/jpl.fireball.json",
+   "rules": [
+    "b"
+   ],
+   "sunset": null,
+   "max_age_days": 60,
+   "budget_mb": 0.3
+  },
+  {
+   "id": "space.sentry",
+   "title": "Sentry impact risk list",
+   "domain": "space",
+   "tier": "1d",
+   "url": "https://ssd-api.jpl.nasa.gov/sentry.api",
+   "adapter": "jpl_sentry",
+   "kind": "record",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NASA JPL CNEOS",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/jpl.sentry.json",
+   "rules": [
+    "b"
+   ],
+   "sunset": null,
+   "max_age_days": 7,
+   "budget_mb": 0.4
+  },
+  {
+   "id": "space.geomag",
+   "title": "USGS ground magnetometers H, D, Z (1 min)",
+   "domain": "space",
+   "tier": "1h",
+   "url": "https://geomag.usgs.gov/ws/data/?id={OBS}&elements=H,D,Z&sampling_period=60&type=variation&format=json",
+   "adapter": "usgs_geomag",
+   "kind": "series",
+   "class": "A",
+   "retention": {
+    "r": "7d",
+    "m5": "30d",
+    "h1": "1y",
+    "d1": "5y"
+   },
+   "attribution": "USGS Geomagnetism Program",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/usgs.geomag-bou.json",
+   "rules": [
+    "b"
+   ],
+   "sunset": null,
+   "observatories": [
+    "BOU",
+    "FRD",
+    "HON"
+   ],
+   "dt": 60,
+   "max_age_days": 1,
+   "budget_mb": 1.5
+  },
+  {
+   "id": "space.ssn-daily",
+   "title": "SILSO daily sunspot number",
+   "domain": "space",
+   "tier": "1w",
+   "url": "https://www.sidc.be/SILSO/DATA/SN_d_tot_V2.0.csv",
+   "adapter": "silso_csv",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "SILSO, Royal Observatory of Belgium",
+   "license": "CC BY-NC 4.0",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/silso.daily.csv",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 45,
+   "budget_mb": 1.5
+  },
+  {
+   "id": "space.ssn-estimated",
+   "title": "SILSO estimated international sunspot number",
+   "domain": "space",
+   "tier": "1d",
+   "url": "https://www.sidc.be/SILSO/DATA/EISN/EISN_current.csv",
+   "adapter": "silso_csv",
+   "kind": "series",
+   "class": "B",
+   "retention": {
+    "r": "2y",
+    "d1": "5y"
+   },
+   "attribution": "SILSO, Royal Observatory of Belgium",
+   "license": "CC BY-NC 4.0",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/silso.eisn.csv",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 3,
+   "budget_mb": 0.05
+  },
+  {
+   "id": "geo.quakes",
+   "title": "USGS earthquakes M2.5+",
+   "domain": "geo",
+   "tier": "30m",
+   "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson",
+   "adapter": "usgs_quakes",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "1y",
+    "events_m4.5": "5y"
+   },
+   "attribution": "USGS Earthquake Hazards Program",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/usgs.quakes-2.5-day.json",
+   "rules": [],
+   "sunset": null,
+   "backfill_url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_month.geojson",
+   "backfill_url_2": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson",
+   "max_age_days": 1,
+   "budget_mb": 8
+  },
+  {
+   "id": "geo.tsunami-ntwc",
+   "title": "Tsunami messages NTWC",
+   "domain": "geo",
+   "tier": "30m",
+   "url": "https://www.tsunami.gov/events/xml/PAAQAtom.xml",
+   "adapter": "tsunami_atom",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "NOAA/NWS Tsunami Warning Centers",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/tsunami.ntwc.xml",
+   "rules": [
+    "g"
+   ],
+   "sunset": null,
+   "budget_mb": 0.3
+  },
+  {
+   "id": "geo.tsunami-ptwc",
+   "title": "Tsunami messages PTWC",
+   "domain": "geo",
+   "tier": "30m",
+   "url": "https://www.tsunami.gov/events/xml/PHEBAtom.xml",
+   "adapter": "tsunami_atom",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "NOAA/NWS Tsunami Warning Centers",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/tsunami.ptwc.xml",
+   "rules": [
+    "g"
+   ],
+   "sunset": null,
+   "budget_mb": 0.3
+  },
+  {
+   "id": "geo.gdacs",
+   "title": "GDACS global disaster alerts",
+   "domain": "geo",
+   "tier": "30m",
+   "url": "https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?eventlist=EQ;TC;FL;VO;DR;WF",
+   "adapter": "gdacs",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "GDACS (EC JRC, UN OCHA)",
+   "license": "GDACS terms: attribution required",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/gdacs.events.json",
+   "rules": [
+    "b"
+   ],
+   "sunset": null,
+   "time_field": "todate",
+   "max_age_days": 3,
+   "budget_mb": 1.0
+  },
+  {
+   "id": "geo.eonet",
+   "title": "NASA EONET natural events",
+   "domain": "geo",
+   "tier": "1h",
+   "url": "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30",
+   "adapter": "nasa_eonet",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "NASA EONET",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/nasa.eonet.json",
+   "rules": [
+    "b"
+   ],
+   "sunset": null,
+   "time_field": "geometry[-1].date",
+   "max_age_days": 3,
+   "budget_mb": 0.5
+  },
+  {
+   "id": "geo.volcanoes",
+   "title": "USGS elevated volcanoes",
+   "domain": "geo",
+   "tier": "1d",
+   "url": "https://volcanoes.usgs.gov/hans-public/api/volcano/getElevatedVolcanoes",
+   "adapter": "usgs_volcano",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "USGS Volcano Hazards Program",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/usgs.volcano-elevated.json",
+   "rules": [
+    "b",
+    "g"
+   ],
+   "sunset": null,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "geo.dart",
+   "title": "NDBC DART tsunami buoys (water column height)",
+   "domain": "geo",
+   "tier": "30m",
+   "url": "https://www.ndbc.noaa.gov/data/realtime2/{STATION}.dart",
+   "adapter": "ndbc_dart",
+   "kind": "series",
+   "class": "A",
+   "retention": {
+    "r": "7d"
+   },
+   "attribution": "NOAA NDBC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/ndbc.dart-21414.txt",
+   "rules": [
+    "d"
+   ],
+   "sunset": null,
+   "station_list": "https://www.ndbc.noaa.gov/activestations.xml",
+   "station_list_fixture": "fixtures/ndbc.active-stations.xml",
+   "max_age_days": 2,
+   "budget_mb": 1.0
+  },
+  {
+   "id": "weather.nhc",
+   "title": "NHC/CPHC active tropical storms",
+   "domain": "weather",
+   "tier": "30m",
+   "url": "https://www.nhc.noaa.gov/CurrentStorms.json",
+   "adapter": "nhc_storms",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "NOAA National Hurricane Center",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/nhc.current-storms.json",
+   "rules": [
+    "g"
+   ],
+   "sunset": null,
+   "budget_mb": 0.3
+  },
+  {
+   "id": "weather.ibtracs",
+   "title": "IBTrACS active storm tracks (global)",
+   "domain": "weather",
+   "tier": "1h",
+   "url": "https://www.ncei.noaa.gov/data/international-best-track-archive-for-climate-stewardship-ibtracs/v04r01/access/csv/ibtracs.ACTIVE.list.v04r01.csv",
+   "adapter": "ibtracs",
+   "kind": "events",
+   "class": "D",
+   "retention": {
+    "events": "2y"
+   },
+   "attribution": "NOAA NCEI IBTrACS",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/ibtracs.active.csv",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 3,
+   "budget_mb": 2.5
+  },
+  {
+   "id": "weather.fires",
+   "title": "Active fires (VIIRS, 24 h), 1 deg cell counts",
+   "domain": "weather",
+   "tier": "1h",
+   "url": "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv",
+   "adapter": "firms",
+   "kind": "grid",
+   "class": "C",
+   "retention": {
+    "snap": "90d",
+    "snap_every": "1d",
+    "w1_sum": "2y"
+   },
+   "attribution": "NASA FIRMS",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/firms.viirs-24h-nokey.csv",
+   "rules": [],
+   "sunset": null,
+   "grid": {
+    "deg": 1,
+    "aggregate": "count"
+   },
+   "alt_url": "https://firms.modaps.eosdis.nasa.gov/api/area/csv/{FIRMS_MAP_KEY}/VIIRS_SNPP_NRT/world/1",
+   "alt_key_secret": "FIRMS_MAP_KEY",
+   "max_age_days": 2,
+   "budget_mb": 7
+  },
+  {
+   "id": "ocean.sst-anom",
+   "title": "Sea surface temperature anomaly (OISST v2.1 NRT), 1 deg",
+   "domain": "ocean",
+   "tier": "1d",
+   "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/ncdcOisst21NrtAgg.csv?anom%5B(last)%5D%5B(0.0)%5D%5B(-89.875):4:(89.875)%5D%5B(0.125):4:(359.875)%5D",
+   "adapter": "erddap_grid",
+   "kind": "grid",
+   "class": "C",
+   "retention": {
+    "snap": "90d",
+    "snap_every": "1d",
+    "w1_mean": "2y"
+   },
+   "attribution": "NOAA NCEI OISST via NOAA CoastWatch ERDDAP",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/erddap.oisst-nrt-anom.csv",
+   "rules": [],
+   "sunset": null,
+   "grid": {
+    "deg": 1,
+    "aggregate": "stride"
+   },
+   "derived": [
+    "global_mean",
+    "nino34_mean"
+   ],
+   "max_age_days": 4,
+   "budget_mb": 42
+  },
+  {
+   "id": "ocean.sla",
+   "title": "Sea level anomaly (altimetry), 1 deg",
+   "domain": "ocean",
+   "tier": "1d",
+   "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/nesdisSSH1day.csv?sla%5B(last)%5D%5B(-89.875):4:(89.875)%5D%5B(-179.875):4:(179.875)%5D",
+   "adapter": "erddap_grid",
+   "kind": "grid",
+   "class": "C",
+   "retention": {
+    "snap": "90d",
+    "snap_every": "1d",
+    "w1_mean": "2y"
+   },
+   "attribution": "NOAA CoastWatch",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/erddap.sla-anom.csv",
+   "rules": [
+    "e"
+   ],
+   "sunset": null,
+   "grid": {
+    "deg": 1,
+    "aggregate": "stride"
+   },
+   "derived": [
+    "global_mean"
+   ],
+   "max_age_days": 45,
+   "budget_mb": 35
+  },
+  {
+   "id": "ocean.coral-alert",
+   "title": "Coral bleaching alert area, 7-day max, 2 deg",
+   "domain": "ocean",
+   "tier": "1d",
+   "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/NOAA_DHW.csv?CRW_BAA_7D_MAX%5B(last)%5D%5B(89.975):40:(-89.975)%5D%5B(-179.975):40:(179.975)%5D",
+   "adapter": "erddap_grid",
+   "kind": "grid",
+   "class": "C",
+   "retention": {
+    "snap": "90d",
+    "snap_every": "1d"
+   },
+   "attribution": "NOAA Coral Reef Watch",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "runner",
+   "fixture": null,
+   "rules": [],
+   "sunset": null,
+   "grid": {
+    "deg": 2,
+    "aggregate": "stride"
+   },
+   "note": "ERDDAP sends a 302 redirect to pae-paha.pacioos.hawaii.edu (dataset dhw_5km); follow redirects",
+   "max_age_days": 4,
+   "budget_mb": 6
+  },
+  {
+   "id": "climate.temp-ncei",
+   "title": "Global land and ocean temperature anomaly (NCEI, monthly)",
+   "domain": "climate",
+   "tier": "1w",
+   "url": "https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series/globe/tavg/land_ocean/1/0/1850-{Y}/data.json",
+   "adapter": "ncei_cag",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA NCEI Climate at a Glance",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/ncei.cag-global-b.json",
+   "rules": [
+    "b",
+    "e"
+   ],
+   "sunset": null,
+   "max_age_days": 75,
+   "budget_mb": 0.1
+  },
+  {
+   "id": "climate.temp-gistemp",
+   "title": "Global temperature anomaly (NASA GISTEMP v4, monthly)",
+   "domain": "climate",
+   "tier": "1w",
+   "url": "https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.csv",
+   "adapter": "gistemp",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NASA GISS GISTEMP v4",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/giss.gistemp.csv",
+   "rules": [
+    "e"
+   ],
+   "sunset": null,
+   "max_age_days": 75,
+   "budget_mb": 0.1
+  },
+  {
+   "id": "climate.co2-daily",
+   "title": "CO2 daily, Mauna Loa",
+   "domain": "climate",
+   "tier": "1d",
+   "url": "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.csv",
+   "adapter": "gml_csv",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA GML",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/gml.co2-daily-mlo.csv",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 10,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "climate.co2-monthly",
+   "title": "CO2 monthly, Mauna Loa",
+   "domain": "climate",
+   "tier": "1w",
+   "url": "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_mm_mlo.csv",
+   "adapter": "gml_csv",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA GML",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/gml.co2-monthly-mlo.csv",
+   "rules": [
+    "e"
+   ],
+   "sunset": null,
+   "max_age_days": 75,
+   "budget_mb": 0.05
+  },
+  {
+   "id": "climate.co2-global",
+   "title": "CO2 global monthly mean",
+   "domain": "climate",
+   "tier": "1w",
+   "url": "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_mm_gl.csv",
+   "adapter": "gml_csv",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA GML",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/gml.co2-monthly-gl.csv",
+   "rules": [
+    "e"
+   ],
+   "sunset": null,
+   "max_age_days": 150,
+   "budget_mb": 0.05
+  },
+  {
+   "id": "climate.ch4-global",
+   "title": "CH4 global monthly mean",
+   "domain": "climate",
+   "tier": "1w",
+   "url": "https://gml.noaa.gov/webdata/ccgg/trends/ch4/ch4_mm_gl.csv",
+   "adapter": "gml_csv",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA GML",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/gml.ch4-monthly-gl.csv",
+   "rules": [
+    "e"
+   ],
+   "sunset": null,
+   "max_age_days": 150,
+   "budget_mb": 0.05
+  },
+  {
+   "id": "climate.n2o-global",
+   "title": "N2O global monthly mean",
+   "domain": "climate",
+   "tier": "1w",
+   "url": "https://gml.noaa.gov/webdata/ccgg/trends/n2o/n2o_mm_gl.csv",
+   "adapter": "gml_csv",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA GML",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/gml.n2o-monthly-gl.csv",
+   "rules": [
+    "e"
+   ],
+   "sunset": null,
+   "max_age_days": 150,
+   "budget_mb": 0.05
+  },
+  {
+   "id": "climate.sf6-global",
+   "title": "SF6 global monthly mean",
+   "domain": "climate",
+   "tier": "1w",
+   "url": "https://gml.noaa.gov/webdata/ccgg/trends/sf6/sf6_mm_gl.csv",
+   "adapter": "gml_csv",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA GML",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/gml.sf6-monthly-gl.csv",
+   "rules": [
+    "e"
+   ],
+   "sunset": null,
+   "max_age_days": 150,
+   "budget_mb": 0.05
+  },
+  {
+   "id": "climate.seaice-north",
+   "title": "Arctic sea ice extent (daily)",
+   "domain": "climate",
+   "tier": "1d",
+   "url": "https://noaadata.apps.nsidc.org/NOAA/G02135/north/daily/data/N_seaice_extent_daily_v4.0.csv",
+   "adapter": "nsidc",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NSIDC Sea Ice Index G02135 v4",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/nsidc.north-v4.csv",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 5,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "climate.seaice-south",
+   "title": "Antarctic sea ice extent (daily)",
+   "domain": "climate",
+   "tier": "1d",
+   "url": "https://noaadata.apps.nsidc.org/NOAA/G02135/south/daily/data/S_seaice_extent_daily_v4.0.csv",
+   "adapter": "nsidc",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NSIDC Sea Ice Index G02135 v4",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/nsidc.south-v4.csv",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 5,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "climate.oni",
+   "title": "ENSO Oceanic Nino Index",
+   "domain": "climate",
+   "tier": "1w",
+   "url": "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt",
+   "adapter": "cpc_oni",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA CPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/cpc.oni.txt",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 100,
+   "budget_mb": 0.02
+  },
+  {
+   "id": "climate.nino-weekly",
+   "title": "Weekly Nino region SST and anomaly",
+   "domain": "climate",
+   "tier": "1w",
+   "url": "https://www.cpc.ncep.noaa.gov/data/indices/wksst9120.for",
+   "adapter": "cpc_nino_weekly",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA CPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/cpc.nino-weekly.txt",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 14,
+   "budget_mb": 0.1
+  },
+  {
+   "id": "climate.ao",
+   "title": "Daily AO index",
+   "domain": "climate",
+   "tier": "1d",
+   "url": "https://ftp.cpc.ncep.noaa.gov/cwlinks/norm.daily.ao.cdas.z1000.19500101_current.csv",
+   "adapter": "cpc_daily",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA CPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/cpc.ao-daily.csv",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 5,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "climate.nao",
+   "title": "Daily NAO index",
+   "domain": "climate",
+   "tier": "1d",
+   "url": "https://ftp.cpc.ncep.noaa.gov/cwlinks/norm.daily.nao.cdas.z500.19500101_current.csv",
+   "adapter": "cpc_daily",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA CPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/cpc.nao-daily.csv",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 5,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "climate.aao",
+   "title": "Daily AAO index",
+   "domain": "climate",
+   "tier": "1d",
+   "url": "https://ftp.cpc.ncep.noaa.gov/cwlinks/norm.daily.aao.cdas.z700.19790101_current.csv",
+   "adapter": "cpc_daily",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA CPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/cpc.aao-daily.csv",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 5,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "climate.pna",
+   "title": "Daily PNA index",
+   "domain": "climate",
+   "tier": "1d",
+   "url": "https://ftp.cpc.ncep.noaa.gov/cwlinks/norm.daily.pna.cdas.z500.19500101_current.csv",
+   "adapter": "cpc_daily",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA CPC",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/cpc.pna-daily.csv",
+   "rules": [],
+   "sunset": null,
+   "max_age_days": 5,
+   "budget_mb": 0.2
+  },
+  {
+   "id": "climate.ozone-hole",
+   "title": "Antarctic ozone hole area and minimum",
+   "domain": "climate",
+   "tier": "1d",
+   "url": "https://ozonewatch.gsfc.nasa.gov/meteorology/figures/ozone/to3areas_{Y}_toms+omi+omps.txt",
+   "adapter": "ozone_watch",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "current year"
+   },
+   "attribution": "NASA Ozone Watch",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "ok",
+   "fixture": "fixtures/nasa.ozone-hole.txt",
+   "rules": [
+    "f"
+   ],
+   "sunset": null,
+   "season": "Aug-Dec",
+   "budget_mb": 0.05
+  },
+  {
+   "id": "climate.mjo",
+   "title": "MJO RMM index",
+   "domain": "climate",
+   "tier": "1d",
+   "url": "https://www.bom.gov.au/climate/mjo/graphics/rmm.74toRealtime.txt",
+   "adapter": "bom_mjo",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "Australian Bureau of Meteorology",
+   "license": "BoM terms: attribution required",
+   "key_secret": null,
+   "status": "runner",
+   "fixture": null,
+   "rules": [],
+   "sunset": null,
+   "note": "403 from the audit workspace; test on the runner; on failure set status error and hide the widget",
+   "max_age_days": 5,
+   "budget_mb": 0.6
+  },
+  {
+   "id": "climate.gmsl",
+   "title": "Global mean sea level (NOAA STAR)",
+   "domain": "climate",
+   "tier": "1w",
+   "url": "https://www.star.nesdis.noaa.gov/socd/lsa/SeaLevelRise/slr/slr_sla_gbl_free_ref_90.csv",
+   "adapter": "star_gmsl",
+   "kind": "series",
+   "class": "E",
+   "retention": {
+    "record": "full"
+   },
+   "attribution": "NOAA STAR Laboratory for Satellite Altimetry",
+   "license": "US Government work",
+   "key_secret": null,
+   "status": "runner",
+   "fixture": null,
+   "rules": [],
+   "sunset": null,
+   "note": "connection reset from the audit workspace; fallback: area-weighted mean of ocean.sla",
+   "max_age_days": 60,
+   "budget_mb": 0.1
+  }
+ ],
+ "static": [
+  {
+   "id": "static.coastline",
+   "url": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_coastline.geojson",
+   "fixture": "fixtures/static.ne-110m-coastline.json",
+   "license": "Public domain (Natural Earth)",
+   "target": "static/coast-110m.json"
+  }
+ ]
+}
