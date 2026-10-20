@@ -1,0 +1,1 @@
+# Keep-alive log (plan 10.5). The workflow adds one line each month: date and store size.

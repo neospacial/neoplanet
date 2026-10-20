@@ -1,0 +1,124 @@
+# Pipeline: fetch, store, deploy (plan 10).
+# The schedule runs every 30 minutes. The 1h, 1d, and 1w tiers run when they are due.
+name: run
+
+on:
+  schedule:
+    - cron: "13,43 * * * *"
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: "Tiers to run. auto = 30m and each slower tier that is due."
+        type: choice
+        options: [auto, all, 30m, 1h, 1d, 1w]
+        default: auto
+      backfill:
+        description: "Read the longest source windows (first run or recovery, plan 4.4)."
+        type: boolean
+        default: false
+
+permissions:
+  contents: write     # keep-alive commit only (plan 10.5)
+  pages: write        # deploy
+  id-token: write     # deploy
+  actions: write      # delete old cache entries
+
+concurrency:
+  group: pipeline
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      deploy: ${{ steps.run.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Restore the store from the cache
+        id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: data
+          key: store-${{ github.run_id }}
+          restore-keys: store-
+
+      - name: Run the pipeline
+        id: run
+        env:
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+          TIER: ${{ inputs.tier || 'auto' }}
+          BACKFILL: ${{ inputs.backfill && 'true' || 'false' }}
+          MATCHED: ${{ steps.cache.outputs.cache-matched-key }}
+          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: |
+          set -- --tier "$TIER"
+          if [ "$BACKFILL" = "true" ]; then set -- "$@" --backfill; fi
+          # No cache entry: download data/ from the live site one time (plan 4.3).
+          if [ -z "$MATCHED" ]; then set -- "$@" --restore-from "$SITE_URL"; fi
+          python3 fetch/run.py "$@"
+
+      - name: Save the store to the cache
+        if: steps.run.outputs.changed == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: data
+          key: store-${{ github.run_id }}
+
+      - name: Delete old store entries (keep 3)
+        if: steps.run.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh cache list --repo "$GITHUB_REPOSITORY" --key store- --sort created_at --order desc \
+            --limit 100 --json id --jq '.[3:][].id' |
+            while read -r id; do gh cache delete "$id" --repo "$GITHUB_REPOSITORY" || true; done
+
+      - name: Keep-alive commit (first run of each month)
+        if: github.ref == 'refs/heads/main'
+        env:
+          SIZE_MB: ${{ steps.run.outputs.size_mb }}
+        run: |
+          month=$(date -u +%Y-%m)
+          if grep -q "^$month" KEEPALIVE.txt 2>/dev/null; then exit 0; fi
+          echo "$(date -u +%Y-%m-%d) store ${SIZE_MB:-0} MB" >> KEEPALIVE.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add KEEPALIVE.txt
+          git commit -m "Keep-alive $month"
+          git pull --rebase --quiet origin main || true
+          git push || echo "::warning::Keep-alive push failed. Give the workflow write access (docs/OPERATIONS.md, section 0)."
+
+      - name: Make the site folder
+        if: steps.run.outputs.deploy == 'true'
+        run: |
+          mkdir -p _site
+          if [ -f index.html ]; then cp index.html _site/; fi
+          if [ -d static ]; then cp -r static _site/; fi
+          rsync -a --exclude '_state/' --exclude '.tmp-*' data/ _site/data/
+          du -sh _site
+
+      - name: Upload the site
+        if: steps.run.outputs.deploy == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: fetch
+    if: needs.fetch.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

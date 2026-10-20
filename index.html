@@ -1,0 +1,1376 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; worker-src blob:; img-src 'none'">
+<meta name="version" content="0.6.0">
+<meta name="description" content="The state of the planet and near space from public data.">
+<title>Public Data Dashboard</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121820;--panel2:#18202a;--line:#253040;--text:#dce3ea;--muted:#8a96a3;--accent:#4cc2ff;
+--ok:#2fb38a;--stale:#e6a23c;--err:#e5603b;--deg:#c77dba;--grid:#1d2631;--font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+[data-theme=light]{--bg:#f3f5f7;--panel:#fff;--panel2:#f0f3f6;--line:#d5dbe1;--text:#1b232c;--muted:#5c6773;--accent:#0a6ebd;
+--ok:#0b8a63;--stale:#b26b00;--err:#c2410c;--deg:#9d4f91;--grid:#e6eaee}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+a{color:var(--accent)}
+html,body{margin:0;background:var(--bg);color:var(--text);font:13px/1.35 var(--font)}
+body{font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+select{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:2px 4px}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:3px 8px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+header h1{font-size:15px;margin:0 8px 0 0;font-weight:600;letter-spacing:.2px}
+.grp{display:flex;gap:2px}
+.grp button{border-radius:0}.grp button:first-child{border-radius:4px 0 0 4px}.grp button:last-child{border-radius:0 4px 4px 0}
+#sum{color:var(--muted);margin-left:auto}
+#banner{background:var(--stale);color:#111;padding:6px 12px}
+main{display:grid;grid-template-columns:repeat(var(--cols,12),1fr);grid-auto-rows:80px;grid-auto-flow:row dense;gap:8px;padding:8px 12px}
+.w{background:var(--panel);border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
+.w.drag{opacity:.45;outline:1px dashed var(--accent)}
+.wh{display:flex;align-items:baseline;gap:6px;padding:5px 8px 3px;border-bottom:1px solid var(--grid);min-height:28px}
+.grip{cursor:grab;border:0;background:none;padding:0 2px;color:var(--muted);touch-action:none}
+.wt{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wv{margin-left:auto;font-weight:600;white-space:nowrap}
+.wa{color:var(--muted);font-size:11px;white-space:nowrap}
+.wh button{padding:0 5px;border:0;background:none;color:var(--muted)}
+.wb{flex:1;min-height:0;position:relative;overflow:hidden}
+.wb canvas{position:absolute;inset:0;width:100%;height:100%}
+.wf{font-size:10.5px;color:var(--muted);padding:2px 8px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs{position:absolute;right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize;touch-action:none;border:0;background:linear-gradient(135deg,transparent 50%,var(--line) 50%);border-radius:0 0 6px 0;padding:0}
+.badge{font-size:10.5px;padding:0 5px;border-radius:3px;border:1px solid currentColor}
+.b-stale{color:var(--stale)}.b-error{color:var(--err)}.b-degraded{color:var(--deg)}.b-ok{color:var(--ok)}
+.info{position:absolute;inset:28px 0 0 0;background:var(--panel);padding:8px 10px;overflow:auto;z-index:2;font-size:12.5px}
+.tip{position:fixed;z-index:20;pointer-events:none;background:var(--panel2);border:1px solid var(--line);padding:4px 6px;border-radius:4px;font-size:11.5px;white-space:nowrap}
+.empty{color:var(--muted);padding:12px}
+#cat{position:fixed;right:0;top:0;bottom:0;width:min(360px,100vw);background:var(--panel);border-left:1px solid var(--line);z-index:10;overflow:auto;padding:10px 12px}
+#cat h2{font-size:14px;margin:4px 0 8px}#cat h3{font-size:12px;color:var(--muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.5px}
+#cat label{display:flex;gap:6px;align-items:center;padding:2px 0}
+#cat .na{color:var(--muted)}
+.scales{display:flex;gap:8px;padding:6px 8px;height:100%}
+.sc{flex:1;border-radius:4px;padding:4px 6px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid var(--line)}
+.sc b{font-size:22px;line-height:1}.sc small{font-size:11px}
+table{border-collapse:collapse;width:100%}
+td,th{padding:2px 6px;border-bottom:1px solid var(--grid);text-align:left;white-space:nowrap}
+th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel)}
+td.n,th.n{text-align:right}
+.bar{height:6px;background:var(--grid);border-radius:3px;min-width:50px}.bar i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+.scroll{overflow:auto;height:100%}
+footer{color:var(--muted);font-size:11.5px;padding:10px 12px 20px;border-top:1px solid var(--line)}
+footer a{color:var(--accent)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (max-width:700px){main{--cols:4;gap:6px;padding:6px}header{gap:6px}#sum{width:100%;margin:0}.wh{flex-wrap:wrap}.wv{margin-left:0}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Public Data Dashboard</h1>
+  <div class="grp" id="ranges" role="group" aria-label="Time range"></div>
+  <button id="live" aria-pressed="true" title="Follow the current time">Live</button>
+  <button id="tz" title="Switch between UTC and local time">UTC</button>
+  <select id="preset" aria-label="Layout preset"></select>
+  <button id="catb" aria-expanded="false" aria-controls="cat">Widgets</button>
+  <button id="themeb" title="Switch the theme">Theme</button>
+  <span id="sum" aria-live="polite"></span>
+</header>
+<div id="banner" role="alert" hidden></div>
+<canvas id="strip" height="22" style="display:block;width:100%;height:22px;cursor:crosshair;touch-action:none" role="slider" tabindex="0" aria-label="Time window: drag to select, double-click or Escape for live"></canvas>
+<main id="grid" aria-label="Dashboard widgets"></main>
+<aside id="cat" hidden aria-label="Widget catalog"></aside>
+<div id="tip" class="tip" hidden></div>
+<div id="live-region" class="sr" aria-live="polite"></div>
+<footer>
+  <p><strong>This dashboard is not an official warning service.</strong> Each alert links to the official issuer. The page shows public data only. It draws all visuals from data.</p>
+  <p id="attrib"></p>
+  <p>Version <span id="ver"></span>. Data sources and licenses: <code>docs/SOURCES.md</code> in the repository. Keyboard: Tab to a widget grip, then Alt + arrow keys to move, Alt + Shift + arrow keys to resize.</p>
+</footer>
+<script>
+'use strict';
+// ---------------------------------------------------------------- basics
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const k in attrs) {
+    if (k === 'class') e.className = attrs[k];
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]);
+    else if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+  }
+  for (const k of kids) if (k != null) e.append(k);
+  return e;
+};
+const VERSION = $('meta[name=version]').content;
+const H = 3600, D = 86400, Y = 365 * D;
+const TIER_S = {'30m': 1800, '1h': 3600, '1d': D, '1w': 7 * D};
+const RANGES = [['6h', 6 * H], ['24h', D], ['7d', 7 * D], ['30d', 30 * D], ['1y', Y], ['5y', 5 * Y]];
+const PAL = ['#56b4e9', '#e69f00', '#009e73', '#f0e442', '#cc79a7', '#d55e00', '#0072b2', '#999999'];
+const SCALE_C = ['#2f3b48', '#f6eb14', '#ffc800', '#ff9600', '#ff0000', '#c80000'];
+const SHAPE = {ok: '●', stale: '▲', degraded: '◆', error: '■'};
+const qp = new URLSearchParams(location.search);
+const FROZEN = qp.get('now') ? Date.parse(qp.get('now')) / 1000 : null;
+const now = () => FROZEN || Date.now() / 1000;
+const ls = {
+  get(k, d) { try { const v = localStorage.getItem('pdd.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('pdd.' + k, JSON.stringify(v)); } catch (e) { /* storage off */ } },
+};
+const S = {man: null, range: ls.get('range', D), utc: ls.get('utc', true), live: true, end: null, hover: null};
+const say = t => { $('#live-region').textContent = t; };
+
+// ---------------------------------------------------------------- formats
+const pad = n => String(n).padStart(2, '0');
+const MON = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ');
+function parts(t) {
+  const d = new Date(t * 1000);
+  return S.utc ? [d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes()]
+    : [d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()];
+}
+function fmtTime(t) {
+  if (t == null) return '-';
+  const [y, m, d, h, mi] = parts(t);
+  return `${y}-${pad(m + 1)}-${pad(d)} ${pad(h)}:${pad(mi)}${S.utc ? 'Z' : ''}`;
+}
+function fmtAge(s) {
+  if (s == null || !isFinite(s)) return '-';
+  s = Math.max(0, s);
+  if (s < 90) return Math.round(s) + ' s';
+  if (s < 5400) return Math.round(s / 60) + ' min';
+  if (s < 2 * D) return Math.round(s / H) + ' h';
+  if (s < 90 * D) return Math.round(s / D) + ' d';
+  return (s / Y).toFixed(1) + ' y';
+}
+function fmtNum(v, unit) {
+  if (v == null || !isFinite(v)) return '-';
+  const a = Math.abs(v);
+  let s = a !== 0 && (a < 1e-3 || a >= 1e6) ? v.toExponential(2) : a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : v.toFixed(2);
+  return unit ? s + ' ' + (unit === 'degC' ? '°C' : unit) : s;
+}
+const fmtMB = b => (b / 1048576).toFixed(b < 10485760 ? 2 : 1) + ' MB';
+const dur = s => { const m = /^(\d+)([mhdwy])$/.exec(s || ''); return m ? +m[1] * {m: 60, h: H, d: D, w: 7 * D, y: Y}[m[2]] : null; };
+
+// ---------------------------------------------------------------- worker: fetch, decode, downsample
+function workerMain(self) {
+  const cache = new Map(); let size = 0; const MAX = 50e6;
+  const deq = (v, q) => v == null ? NaN : q.type === 'log10' ? Math.pow(10, v / q.scale) : v / (q.scale || 1) + (q.off || 0);
+  function decodeSeries(j) {
+    const n = j.n, t = new Float64Array(n);
+    if (j.t) { let x = j.t0; for (let i = 0; i < n; i++) { x += j.t[i]; t[i] = x; } }
+    else for (let i = 0; i < n; i++) t[i] = j.t0 + i * j.dt;
+    const cols = {};
+    for (const c in j.cols) {
+      const a = new Float64Array(n), src = j.cols[c], q = j.q[c] || {};
+      for (let i = 0; i < n; i++) a[i] = deq(src[i], q);
+      cols[c] = a;
+    }
+    return {t, cols, dt: j.dt || 0, bytes: 8 * n * (1 + Object.keys(cols).length)};
+  }
+  function decodeGrid(data, q, n, fill) {
+    const out = new Float32Array(n).fill(fill == null ? NaN : fill);
+    let i = 0, p = 0;
+    while (p < data.length) { i += data[p]; const c = data[p + 1]; p += 2; for (let k = 0; k < c; k++) out[i + k] = deq(data[p + k], q); i += c; p += c; }
+    return out;
+  }
+  async function load(url) {
+    const e = cache.get(url);
+    if (e) { cache.delete(url); cache.set(url, e); return e; }
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + url);
+    const v = decodeSeries(await r.json());
+    cache.set(url, v); size += v.bytes;
+    while (size > MAX && cache.size > 1) { const [k, o] = cache.entries().next().value; cache.delete(k); size -= o.bytes; }
+    return v;
+  }
+  // M4: for each pixel keep the first, min, max, and last point. A pixel with no value makes a gap.
+  function m4(t, y, a, b, px, gap) {
+    const T = [], V = [];
+    let last = -1, lastT = -Infinity;
+    const push = (tt, vv) => { T.push(tt); V.push(vv); };
+    if (t.length <= px * 2) {
+      for (let i = 0; i < t.length; i++) {
+        if (t[i] < a || t[i] > b) continue;
+        if (gap && t[i] - lastT > gap && T.length) push(lastT + 1, NaN);
+        push(t[i], y[i]); lastT = t[i];
+      }
+      return [T, V];
+    }
+    const w = (b - a) / px;
+    let bi = -1, fI = -1, mnI = -1, mxI = -1, lI = -1;
+    const flush = () => {
+      if (fI < 0) return;
+      const ids = [...new Set([fI, mnI, mxI, lI])].sort((p, q) => p - q);
+      for (const i of ids) push(t[i], y[i]);
+    };
+    for (let i = 0; i < t.length; i++) {
+      const tt = t[i];
+      if (tt < a || tt > b) continue;
+      const k = Math.floor((tt - a) / w);
+      if (gap && tt - lastT > gap && lastT > -Infinity) { flush(); fI = -1; bi = k; push(lastT + 1, NaN); }
+      if (k !== bi) { flush(); bi = k; fI = mnI = mxI = lI = -1; }
+      lastT = tt;
+      const v = y[i];
+      if (!(v === v)) continue;
+      if (fI < 0) fI = mnI = mxI = i;
+      if (v < y[mnI]) mnI = i;
+      if (v > y[mxI]) mxI = i;
+      lI = i;
+    }
+    flush();
+    last = 0;
+    return [T, V];
+  }
+  async function series({urls, a, b, px, cols}) {
+    const parts = (await Promise.all(urls.map(load))).sort((p, q) => p.t[0] - q.t[0]);
+    const n = parts.reduce((s, p) => s + p.t.length, 0);
+    const t = new Float64Array(n); let o = 0;
+    for (const p of parts) { t.set(p.t, o); o += p.t.length; }
+    let gap = parts.length && parts[0].dt ? parts[0].dt * 2.5 : 0;
+    if (!gap && n > 2) { const d = []; for (let i = 1; i < n; i += Math.ceil(n / 200)) d.push(t[i] - t[i - 1]); d.sort((p, q) => p - q); gap = d[d.length >> 1] * 3.5; }
+    const out = {}, tr = [];
+    for (const c of cols) {
+      const y = new Float64Array(n); o = 0;
+      for (const p of parts) { y.set(p.cols[c] || new Float64Array(p.t.length).fill(NaN), o); o += p.t.length; }
+      const [T, V] = m4(t, y, a, b, px, gap);
+      const tt = Float64Array.from(T), vv = Float64Array.from(V);
+      out[c] = {t: tt, y: vv}; tr.push(tt.buffer, vv.buffer);
+    }
+    return [out, tr];
+  }
+  async function grid({url}) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json(), g = j.grid, n = g.nlat * g.nlon;
+    const snaps = (j.snaps || [{t: j.t, data: j.data}]).map(s => ({t: s.t, v: decodeGrid(s.data, j.q, n, j.fill)}));
+    return [{grid: g, snaps, extra: j.extra}, snaps.map(s => s.v.buffer)];
+  }
+  const API = {series, grid};
+  self.onmessage = async e => {
+    const {id, fn, arg} = e.data;
+    try { const [res, tr] = await API[fn](arg); self.postMessage({id, res}, tr || []); }
+    catch (err) { self.postMessage({id, err: String(err && err.message || err)}); }
+  };
+}
+const RPC = (() => {
+  let w, seq = 0; const wait = new Map();
+  const onmsg = e => { const p = wait.get(e.data.id); wait.delete(e.data.id); if (p) e.data.err ? p[1](new Error(e.data.err)) : p[0](e.data.res); };
+  try {
+    w = new Worker(URL.createObjectURL(new Blob(['(' + workerMain + ')(self)'], {type: 'text/javascript'})));
+    w.onmessage = onmsg;
+  } catch (e) {
+    // No worker: run the same code on the main thread.
+    const fake = {postMessage: d => setTimeout(() => onmsg({data: d}))};
+    workerMain(fake); w = {postMessage: d => fake.onmessage({data: d})};
+  }
+  return (fn, arg) => new Promise((ok, no) => { const id = ++seq; wait.set(id, [ok, no]); w.postMessage({id, fn, arg}); });
+})();
+
+// ---------------------------------------------------------------- data access
+const jcache = new Map();
+function dsUrl(e, tier, name) { return `data/${e.path}/${tier === 'root' ? '' : tier + '/'}${name}.json?h=${e.hash || ''}`; }
+async function getJSON(url) {
+  if (jcache.has(url)) return jcache.get(url);
+  const p = fetch(url).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  jcache.set(url, p);
+  if (jcache.size > 300) jcache.delete(jcache.keys().next().value);
+  p.catch(() => jcache.delete(url));
+  return p;
+}
+const entry = id => S.man && S.man.datasets[id];
+const hasData = id => { const e = entry(id); return !!(e && e.bytes && e.files && e.files.root && e.files.root.includes('latest')); };
+const latest = id => { const e = entry(id); return hasData(id) ? getJSON(dsUrl(e, 'root', 'latest')) : Promise.resolve(null); };
+const meta = id => { const e = entry(id); return hasData(id) ? getJSON(dsUrl(e, 'root', 'meta')) : Promise.resolve(null); };
+function keyBounds(k) {
+  if (k === 'all') return [-Infinity, Infinity];
+  const p = k.split('-').map(Number);
+  if (p.length === 3) { const s = Date.UTC(p[0], p[1] - 1, p[2]) / 1000; return [s, s + D]; }
+  if (p.length === 2) return [Date.UTC(p[0], p[1] - 1, 1) / 1000, Date.UTC(p[0], p[1], 1) / 1000];
+  return [Date.UTC(p[0], 0, 1) / 1000, Date.UTC(p[0] + 1, 0, 1) / 1000];
+}
+const TIER_DT = {m5: 300, h1: H, d1: D};
+// Plan 11.3: raw up to 7 d, m5 up to 30 d, h1 up to 1 y, then d1. Skip a coarse tier with fewer than 50 points.
+function pickTier(e, span) {
+  const order = ['r', 'm5', 'h1', 'd1'];
+  const pref = span <= 7 * D ? 0 : span <= 30 * D ? 1 : span <= Y ? 2 : 3;
+  const has = t => e.files && e.files[t] && e.files[t].length;
+  const ret = t => { const r = (e.retention || {})[t]; return r === undefined ? 0 : dur(r) || Infinity; };
+  const cand = order.slice(pref).concat(order.slice(0, pref).reverse()).filter(has);
+  const fine = cand.filter(t => t === 'r' || span / TIER_DT[t] >= 50 || t === order[pref]);
+  return fine.find(t => ret(t) >= span) || cand.find(t => ret(t) >= span) || cand.sort((p, q) => ret(q) - ret(p))[0];
+}
+async function loadSeries(id, cols, a, b, px, forceTier) {
+  const e = entry(id);
+  if (!hasData(id)) return null;
+  const tier = forceTier || pickTier(e, b - a);
+  if (!tier) return null;
+  const names = (e.files[tier] || []).filter(k => { const [s, f] = keyBounds(k); return f > a && s <= b; });
+  if (!names.length) return {tier, cols: {}};
+  const want = tier === 'r' ? cols : cols.flatMap(c => tier === 'd1' || tier === 'h1' || tier === 'm5' ? [c + '.min', c + '.mean', c + '.max'] : [c]);
+  const res = await RPC('series', {urls: names.map(n => new URL(dsUrl(e, tier, n), location.href).href), a, b, px: Math.max(50, px | 0), cols: want});
+  return {tier, cols: res};
+}
+
+// ---------------------------------------------------------------- canvas chart
+function themeColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = k => cs.getPropertyValue(k).trim();
+  return {text: g('--text'), muted: g('--muted'), grid: g('--grid'), line: g('--line'), accent: g('--accent'), panel: g('--panel')};
+}
+let COL = null;
+function fitCanvas(cv) {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return [c, r.width, r.height];
+}
+const STEPS = [60, 300, 900, 1800, H, 3 * H, 6 * H, 12 * H, D, 2 * D, 7 * D, 14 * D, 30 * D, 91 * D, 182 * D, Y, 2 * Y, 5 * Y, 10 * Y, 25 * Y];
+function timeTicks(a, b, w) {
+  const want = Math.max(2, w / 85), step = STEPS.find(s => (b - a) / s <= want) || 50 * Y;
+  const off = S.utc ? 0 : -new Date().getTimezoneOffset() * 60, out = [];
+  if (step >= 30 * D) {
+    const months = Math.round(step / (30 * D)) || 12;
+    let [y, m] = parts(a); m = Math.ceil((m + (parts(a)[2] > 1 ? 1 : 0)) / months) * months;
+    for (let i = 0; i < 400; i++) {
+      const yy = y + Math.floor(m / 12), mm = m % 12;
+      const t = (S.utc ? Date.UTC(yy, mm, 1) : new Date(yy, mm, 1).getTime()) / 1000;
+      if (t > b) break;
+      if (t >= a) out.push([t, a === 0 && yy === 1970 ? MON[mm] : step >= Y || mm === 0 ? String(yy) : MON[mm]]);
+      m += months;
+    }
+    return out;
+  }
+  for (let t = Math.ceil((a + off) / step) * step - off; t <= b; t += step) {
+    const [, m, d, h, mi] = parts(t);
+    out.push([t, step >= D || (h === 0 && mi === 0) ? `${MON[m]} ${d}` : `${pad(h)}:${pad(mi)}`]);
+  }
+  return out;
+}
+function niceTicks(lo, hi, n) {
+  const span = hi - lo || 1, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const st = [1, 2, 2.5, 5, 10].map(x => x * mag).find(x => span / x <= n) || mag * 10;
+  const out = [];
+  for (let v = Math.ceil(lo / st) * st; v <= hi + st * 1e-9; v += st) out.push(+v.toPrecision(12));
+  return out;
+}
+// A chart draws one base layer (cached on an offscreen canvas) and an overlay with the crosshair.
+class Chart {
+  constructor(box, w) { this.cv = el('canvas'); box.append(this.cv); this.w = w; this.base = document.createElement('canvas'); this.opt = null; this.hit = null; }
+  set(opt) { this.opt = opt; this.dirtyBase = true; }
+  draw() {
+    const [c, W, Hh] = fitCanvas(this.cv);
+    const o = this.opt;
+    if (!o) return;
+    if (this.dirtyBase || this.base.width !== this.cv.width || this.base.height !== this.cv.height) {
+      this.base.width = this.cv.width; this.base.height = this.cv.height;
+      const b = this.base.getContext('2d'); b.setTransform(this.cv.width / W, 0, 0, this.cv.height / Hh, 0, 0);
+      this.drawBase(b, W, Hh); this.dirtyBase = false;
+    }
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height); c.drawImage(this.base, 0, 0);
+    c.setTransform(this.cv.width / W, 0, 0, this.cv.height / Hh, 0, 0);
+    if (S.hover != null && this.g && S.hover >= o.a && S.hover <= o.b) {
+      const x = this.g.x(S.hover);
+      c.strokeStyle = COL.muted; c.lineWidth = 1; c.setLineDash([2, 2]);
+      c.beginPath(); c.moveTo(x, this.g.top); c.lineTo(x, this.g.bot); c.stroke(); c.setLineDash([]);
+    }
+  }
+  // The base layer. o.panels is a stack of panels with one time axis; without it, o is one panel.
+  drawBase(c, W, Hh) {
+    const o = this.opt, L = 46, R = 8, ps = o.panels || [o], n = ps.length, gap = 6, bot0 = Hh - 18;
+    c.clearRect(0, 0, W, Hh);
+    c.font = '10.5px ' + getComputedStyle(document.body).fontFamily;
+    const x = t => L + (t - o.a) / (o.b - o.a) * (W - L - R);
+    const ph = (bot0 - 6 - gap * (n - 1)) / n;
+    this.g = {x, top: 6, bot: bot0, L, R, W};
+    ps.forEach((p, k) => this.panel(c, p, x, 6 + k * (ph + gap), 6 + k * (ph + gap) + ph, W, L, R, k === n - 1));
+    const tn = now();
+    if (tn > o.a && tn < o.b) { const xx = x(tn); c.strokeStyle = COL.accent; c.setLineDash([3, 3]); c.beginPath(); c.moveTo(xx, 6); c.lineTo(xx, bot0); c.stroke(); c.setLineDash([]); }
+    if (o.note) { c.textAlign = 'right'; c.textBaseline = 'top'; c.fillStyle = COL.muted; c.fillText(o.note, W - R - 2, 4); }
+  }
+  panel(c, o, x, top, bot, W, L, R, axis) {
+    let lo = Infinity, hi = -Infinity;
+    const tv = v => o.log ? (v > 0 ? Math.log10(v) : NaN) : v;
+    if (o.yfix) { lo = tv(o.yfix[0]); hi = tv(o.yfix[1]); }
+    else {
+      for (const s of o.series) for (const arr of [s.y, s.lo && s.lo.y, s.hi && s.hi.y]) if (arr) for (let i = 0; i < arr.length; i++) { const v = tv(arr[i]); if (v === v) { if (v < lo) lo = v; if (v > hi) hi = v; } }
+      if (o.bars) for (const b of o.bars) { lo = Math.min(lo, 0); hi = Math.max(hi, b.v); }
+      if (!isFinite(lo)) { lo = 0; hi = 1; }
+      if (o.ymin != null) lo = Math.min(lo, o.ymin);
+      if (o.ymax != null) hi = Math.max(hi, o.ymax);
+      if (lo === hi) { lo -= 1; hi += 1; }
+      const p = o.log ? 0.1 : (hi - lo) * 0.06; if (o.ymin == null) lo -= p; hi += p;
+    }
+    const y = v => bot - (tv(v) - lo) / (hi - lo) * (bot - top);
+    // grid and axes
+    c.strokeStyle = COL.grid; c.fillStyle = COL.muted; c.lineWidth = 1; c.textAlign = 'right';
+    const yt = o.log ? Array.from({length: Math.max(0, Math.floor(hi) - Math.ceil(lo) + 1)}, (_, i) => Math.pow(10, Math.ceil(lo) + i)) : niceTicks(lo, hi, Math.max(2, (bot - top) / 28));
+    const dec = yt.length > 1 ? Math.max(0, -Math.floor(Math.log10(Math.abs(yt[1] - yt[0])) + 1e-9)) : 0;
+    for (const v of yt) { const yy = Math.round(y(v)) + .5; c.beginPath(); c.moveTo(L, yy); c.lineTo(W - R, yy); c.stroke(); c.textBaseline = yy > bot - 5 ? 'bottom' : yy < top + 5 ? 'top' : 'middle'; c.fillText(o.log ? '1e' + Math.round(Math.log10(v)) : Math.abs(v) >= 1e5 ? v.toExponential(0) : v.toFixed(Math.min(dec, 3)), L - 4, yy); }
+    c.textAlign = 'center'; c.textBaseline = 'top';
+    for (const [t, lab] of timeTicks(this.opt.a, this.opt.b, W - L - R)) { const xx = Math.round(x(t)) + .5; c.beginPath(); c.moveTo(xx, top); c.lineTo(xx, bot); c.stroke(); if (axis) c.fillText(lab, xx, bot + 3); }
+    c.save(); c.beginPath(); c.rect(L, top - 2, W - L - R, bot - top + 4); c.clip();
+    // threshold lines and labels
+    let lastLab = Infinity;
+    for (const th of (o.th || []).slice().sort((p, q) => tv(p.v) - tv(q.v))) {
+      const yy = y(th.v); if (!(yy >= top && yy <= bot)) continue;
+      c.strokeStyle = th.c || COL.line; c.setLineDash([1, 3]); c.beginPath(); c.moveTo(L, yy); c.lineTo(W - R, yy); c.stroke(); c.setLineDash([]);
+      if (th.label && lastLab - yy >= 11 && yy > top + 12) { c.fillStyle = th.c || COL.muted; c.textAlign = 'right'; c.textBaseline = 'bottom'; c.fillText(th.label, W - R - 2, yy - 1); lastLab = yy; }
+    }
+    // bars (Kp). Forecast bars are hatched.
+    for (const b of o.bars || []) {
+      const x0 = x(b.t), x1 = x(b.t + b.w), yy = y(b.v);
+      c.fillStyle = b.c; c.globalAlpha = b.fc ? .45 : 1; c.fillRect(x0 + .5, yy, Math.max(1, x1 - x0 - 1), bot - yy); c.globalAlpha = 1;
+      if (b.fc) { c.strokeStyle = b.c; c.beginPath(); for (let k = x0 - (bot - yy); k < x1; k += 5) { c.moveTo(Math.max(k, x0), bot - Math.max(0, x0 - k)); c.lineTo(Math.min(k + (bot - yy), x1), bot - Math.min(bot - yy, x1 - k)); } c.stroke(); }
+    }
+    // min/max band, then lines
+    for (const s of o.series) {
+      if (s.lo && s.hi) {
+        c.fillStyle = s.color; c.globalAlpha = .18; c.beginPath(); let open = false;
+        const n = Math.min(s.lo.t.length, s.hi.t.length);
+        const close = (k0, k1) => { for (let k = k1; k >= k0; k--) c.lineTo(x(s.hi.t[k]), y(s.hi.y[k])); c.closePath(); };
+        let k0 = 0;
+        for (let k = 0; k < n; k++) {
+          const v = tv(s.lo.y[k]), w = tv(s.hi.y[k]);
+          if (v === v && w === w) { if (!open) { c.moveTo(x(s.lo.t[k]), y(s.lo.y[k])); open = true; k0 = k; } else c.lineTo(x(s.lo.t[k]), y(s.lo.y[k])); }
+          else if (open) { close(k0, k - 1); open = false; }
+        }
+        if (open) close(k0, n - 1);
+        c.fill(); c.globalAlpha = 1;
+      }
+      // Fill below zero (southward Bz)
+      if (s.fillNeg) {
+        const y0 = y(0); c.fillStyle = s.fillNeg; c.globalAlpha = .35;
+        for (let i = 1; i < s.t.length; i++) { const v = s.y[i]; if (v < 0) { const x0 = x(s.t[i - 1]), x1 = x(s.t[i]); c.fillRect(x0, y0, Math.max(.6, x1 - x0), y(v) - y0); } }
+        c.globalAlpha = 1;
+      }
+      c.strokeStyle = s.color; c.lineWidth = s.w || 1.25; c.setLineDash(s.dash ? [4, 3] : []); c.beginPath();
+      let pen = false;
+      for (let i = 0; i < s.t.length; i++) { const v = s.y[i], ok = tv(v) === tv(v); if (!ok) { pen = false; continue; } const xx = x(s.t[i]), yy = y(v); pen ? c.lineTo(xx, yy) : c.moveTo(xx, yy); pen = true; }
+      c.stroke(); c.setLineDash([]);
+    }
+    // event marks
+    for (const m of o.marks || []) { const xx = x(m.t); c.fillStyle = m.c || COL.accent; c.beginPath(); c.moveTo(xx, top); c.lineTo(xx - 4, top + 7); c.lineTo(xx + 4, top + 7); c.fill(); if (m.label) { c.textAlign = 'left'; c.textBaseline = 'top'; c.fillText(m.label, xx + 5, top); } }
+    c.restore();
+    // legend
+    c.textAlign = 'left'; c.textBaseline = 'top'; let lx = L + 4;
+    for (const s of o.series) { if (!s.label) continue; c.fillStyle = s.color; c.fillRect(lx, top + 3, 10, 2); c.fillStyle = COL.text; c.fillText(s.label, lx + 13, top - 2); lx += c.measureText(s.label).width + 24; }
+  }
+  // Return the tooltip lines for a time.
+  valuesAt(t) {
+    const o = this.opt; if (!o) return [];
+    const out = [];
+    for (const p of o.panels || [o]) {
+      for (const s of p.series) {
+        if (!s.t.length || s.noTip) continue;
+        let lo = 0, hi = s.t.length - 1;
+        while (lo < hi) { const m = (lo + hi) >> 1; s.t[m] < t ? lo = m + 1 : hi = m; }
+        if (lo > 0 && Math.abs(s.t[lo - 1] - t) < Math.abs(s.t[lo] - t)) lo--;
+        out.push(`${s.label || ''} ${fmtNum(s.y[lo], s.unit || p.unit)}${o.summary ? ' (mean)' : ''} at ${fmtTime(s.t[lo])}`);
+      }
+      for (const b of p.bars || []) if (t >= b.t && t < b.t + b.w) out.push(`${b.label} ${fmtTime(b.t)}`);
+    }
+    return out;
+  }
+}
+// A canvas widget that is not a time chart (aurora, maps). draw(c, W, H) paints all; base() is cached.
+class Pane {
+  constructor(box, paint) { this.cv = el('canvas', {role: 'img'}); box.append(this.cv); this.paint = paint; this.dirtyBase = true; }
+  draw() { const [c, W, Hh] = fitCanvas(this.cv); c.clearRect(0, 0, W, Hh); this.paint(c, W, Hh, this); }
+}
+
+// ---------------------------------------------------------------- widgets
+// Each widget definition: type (plan 12), title, datasets, default size [w, h], info text, and functions.
+const GL = k => k >= 9 ? 5 : k >= 8 ? 4 : k >= 7 ? 3 : k >= 6 ? 2 : k >= 5 ? 1 : 0;
+const XRAY_TH = [[1e-8, 'A'], [1e-7, 'B'], [1e-6, 'C'], [1e-5, 'M (R1)'], [1e-4, 'X (R3)']];
+const flareClass = f => { if (!(f > 0)) return '-'; const L = 'ABCMX', e = Math.min(4, Math.max(0, Math.floor(Math.log10(f)) + 8)); return L[e] + (f / Math.pow(10, e - 8)).toFixed(1); };
+// Settings for the generic time series widget (W2) for some datasets. Other series use defaults.
+const SERIES = {
+  'space.xray': {cols: ['long', 'short'], yfix: [1e-9, 1e-3], th: XRAY_TH, marks: 'space.xray-flares', val: v => flareClass(v.long && v.long[1]),
+    info: 'GOES X-ray flux in two bands. The 0.1-0.8 nm flux gives the flare class (A, B, C, M, X) and the NOAA R level. The axis is logarithmic.'},
+  'space.protons': {yfix: [1e-2, 1e5], th: [[10, 'S1'], [100, 'S2'], [1000, 'S3'], [1e4, 'S4']], info: 'GOES integral proton flux. A flux of 10 pfu or more at >=10 MeV is a solar radiation storm (NOAA S scale).'},
+  'space.electrons': {th: [[1000, 'alert']], info: 'GOES integral electron flux >=2 MeV. Values above 1000 pfu can charge satellites.'},
+  'space.sw-plasma': {cols: ['speed'], info: 'Solar wind at L1 from the active spacecraft. Fast wind (more than 500 km/s) and high density push on the magnetosphere.'},
+  'space.sw-mag': {cols: ['bz', 'bt'], th: [[0, '']], info: 'Interplanetary magnetic field at L1. A strong and long southward Bz (negative) causes geomagnetic storms.'},
+  'space.goes-mag': {cols: ['Hp', 'He', 'Hn'], info: 'GOES magnetometer at geostationary orbit, 1 minute.'},
+  'space.hemi-power': {info: 'OVATION hemispheric power: the energy that aurora particles put into each hemisphere.'},
+  'space.dst': {th: [[-50, 'storm'], [-100, 'strong']], info: 'Dst index from WDC Kyoto. A large negative Dst shows a strong ring current (a storm).'},
+  'space.kp-1m': {info: 'Estimated Kp each minute. It is a quick indicator. The official Kp is the 3-hour value.'},
+  'space.f107': {info: 'Solar radio flux at 10.7 cm. It follows the solar activity.'},
+};
+const DEFS = {
+  scales: {type: 'W1', title: 'NOAA space weather scales', ds: ['space.scales'], size: [6, 2], dom: true,
+    info: 'NOAA scales: R (radio blackouts from flares), S (solar radiation storms), G (geomagnetic storms). Level 0 is none; 5 is extreme. The forecast shows the G level and the probability of R1-R2 and S1.'},
+  kp: {type: 'W3', title: 'Planetary Kp', ds: ['space.kp', 'space.kp-forecast'], size: [6, 2],
+    info: 'Planetary Kp index for each 3 hours. Kp 5 or more is a geomagnetic storm (G1 to G5). Hatched bars are the forecast.'},
+  health: {type: 'W13', title: 'Data health', ds: [], size: [12, 4], dom: true,
+    info: 'Status of each dataset: ok, stale (old data), degraded (fallback without a key), or error (the last good data stays). Size against the budget of each dataset. Total against the 150 MB budget and the 1 GB site limit.'},
+};
+function defFor(k) {
+  if (DEFS[k]) return DEFS[k];
+  if (k.startsWith('c:')) {
+    const id = k.slice(2), e = entry(id);
+    return {type: 'W10', title: e ? e.title : id, ds: [id], size: [6, 3], info: 'The full record with a 12-month running mean and a least-squares trend line. "Show seasons" draws one line for each of the last 12 years (this year bold).'};
+  }
+  if (k.startsWith('n:')) {
+    const id = k.slice(2), e = entry(id), bg = BIG[id] || [];
+    return {type: 'W11', title: bg[1] || (e ? e.title : id), ds: [id], size: [3, 2], dom: true, col: bg[0],
+      info: 'The newest value, the last 7 days, the change from 24 hours and 1 year before, and the percentile against all stored values.'};
+  }
+  if (k.startsWith('s:')) {
+    const id = k.slice(2), e = entry(id), cfg = SERIES[id] || {};
+    return {type: 'W2', title: e ? e.title : id, ds: cfg.marks ? [id, cfg.marks] : [id], size: [6, 2], cfg, series: id, info: cfg.info};
+  }
+  return null;
+}
+function catalogKeys() {
+  const keys = Object.keys(DEFS);
+  if (S.man) for (const [id, e] of Object.entries(S.man.datasets)) if (e.kind === 'series') keys.push(CLIM[id] ? 'c:' + id : 's:' + id, 'n:' + id);
+  return keys;
+}
+const PRESETS = {
+  Overview: ['map', 'scales', 'kp', 'events', 's:space.xray', 'wind', 'aurora', 'n:space.sw-plasma', 'n:space.sw-mag', 'n:space.f107', 'n:space.ssn-estimated', 'c:climate.temp-ncei', 'ocean', 'n:climate.co2-daily', 'n:climate.seaice-north', 'calendar', 'health'],
+  'Space Weather': ['scales', 'kp', 'wind', 'aurora', 's:space.xray', 's:space.protons', 'text', 'neo', 'cycle', 's:space.geomag', 's:space.dst', 's:space.hemi-power', 's:space.electrons', 's:space.goes-mag', 'n:space.sw-plasma', 'n:space.f107', 'n:space.ssn-estimated', 'n:space.kp-1m'],
+  'Earth Events': ['map', 'events', 'timeline', 'calendar', 's:geo.dart', 'health'],
+  'Ocean and Climate': ['ocean', 'c:climate.temp-ncei', 'c:climate.co2-monthly', 'c:climate.seaice-north', 'c:climate.seaice-south', 'c:climate.oni', 'c:climate.nino-weekly', 'c:climate.gmsl', 'c:climate.ozone-hole', 'c:climate.ch4-global', 'n:climate.co2-daily', 'n:climate.seaice-north', 'n:climate.temp-gistemp', 'n:climate.nino-weekly', 'health'],
+};
+
+// ---------------------------------------------------------------- layout
+let LAYOUT = ls.get('layout', null);
+if (!LAYOUT || !Array.isArray(LAYOUT.items)) LAYOUT = presetLayout('Overview');
+function presetLayout(name) { return {preset: name, items: (PRESETS[name] || PRESETS.Overview).map(k => ({k}))}; }
+function saveLayout() { ls.set('layout', LAYOUT); }
+const W = new Map();   // key -> widget instance
+function cols() { return getComputedStyle($('#grid')).getPropertyValue('--cols').trim() === '4' ? 4 : 12; }
+function place(w) {
+  const c = cols(), ww = w.item.w || w.def.size[0], hh = w.item.h || w.def.size[1];
+  w.el.style.gridColumn = 'span ' + (c === 4 ? (ww <= 3 ? 2 : 4) : Math.min(12, ww));
+  w.el.style.gridRow = 'span ' + hh;
+}
+function buildGrid() {
+  const g = $('#grid');
+  for (const w of W.values()) w.el.remove();
+  W.clear();
+  for (const item of LAYOUT.items) {
+    const def = defFor(item.k);
+    if (!def) continue;
+    const w = makeWidget(item, def);
+    W.set(item.k, w); g.append(w.el); place(w);
+    w.el.hidden = !!S.man && !available(def);
+    io.observe(w.el);
+  }
+  if (!g.children.length) g.append(el('p', {class: 'empty'}, 'No widgets. Open "Widgets" to add some.'));
+  syncPreset();
+}
+function available(def) { return def.type === 'W13' || def.ds.slice(0, 1).every(hasData); }
+function move(k, d) {
+  const i = LAYOUT.items.findIndex(x => x.k === k), j = Math.max(0, Math.min(LAYOUT.items.length - 1, i + d));
+  if (i < 0 || i === j) return;
+  const [it] = LAYOUT.items.splice(i, 1); LAYOUT.items.splice(j, 0, it);
+  custom(); const node = W.get(k).el, ref = W.get(LAYOUT.items[j + 1] && LAYOUT.items[j + 1].k);
+  $('#grid').insertBefore(node, ref ? ref.el : null); node.querySelector('.grip').focus();
+  say(`Moved ${W.get(k).def.title} to position ${j + 1}.`);
+}
+function resize(k, dw, dh) {
+  const w = W.get(k); if (!w) return;
+  w.item.w = Math.max(2, Math.min(12, (w.item.w || w.def.size[0]) + dw));
+  w.item.h = Math.max(2, Math.min(8, (w.item.h || w.def.size[1]) + dh));
+  custom(); place(w); say(`Size ${w.item.w} by ${w.item.h}.`);
+}
+function custom() { LAYOUT.preset = 'Custom'; saveLayout(); syncPreset(); }
+function syncPreset() { $('#preset').value = LAYOUT.preset in PRESETS ? LAYOUT.preset : 'Custom'; }
+function removeWidget(k) { LAYOUT.items = LAYOUT.items.filter(x => x.k !== k); custom(); buildGrid(); renderCatalog(); }
+function addWidget(k) { if (!LAYOUT.items.some(x => x.k === k)) LAYOUT.items.push({k}); custom(); buildGrid(); refreshAll(); }
+
+// drag to move (pointer events on the grip) and drag to resize (corner)
+let drag = null;
+function startDrag(ev, w, mode) {
+  ev.preventDefault();
+  const r = w.el.getBoundingClientRect(), g = $('#grid').getBoundingClientRect(), c = cols();
+  drag = {w, mode, x: ev.clientX, y: ev.clientY, cw: (g.width - 24) / c, w0: w.item.w || w.def.size[0], h0: w.item.h || w.def.size[1], r};
+  ev.target.setPointerCapture(ev.pointerId);
+  if (mode === 'move') w.el.classList.add('drag');
+}
+document.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  if (drag.mode === 'size') {
+    drag.w.item.w = Math.max(2, Math.min(12, Math.round(drag.w0 + (ev.clientX - drag.x) / drag.cw)));
+    drag.w.item.h = Math.max(2, Math.min(8, Math.round(drag.h0 + (ev.clientY - drag.y) / 88)));
+    place(drag.w); return;
+  }
+  drag.w.el.style.pointerEvents = 'none';
+  const t = document.elementFromPoint(ev.clientX, ev.clientY), over = t && t.closest('.w');
+  drag.w.el.style.pointerEvents = '';
+  if (!over || over === drag.w.el) return;
+  const k = over.dataset.k, i = LAYOUT.items.findIndex(x => x.k === drag.w.item.k), j = LAYOUT.items.findIndex(x => x.k === k);
+  if (i < 0 || j < 0) return;
+  const [it] = LAYOUT.items.splice(i, 1); LAYOUT.items.splice(j, 0, it);
+  $('#grid').insertBefore(drag.w.el, j > i ? over.nextSibling : over);
+});
+document.addEventListener('pointerup', () => { if (!drag) return; drag.w.el.classList.remove('drag'); custom(); drag = null; });
+
+// ---------------------------------------------------------------- widget instance
+function makeWidget(item, def) {
+  const w = {item, def, k: item.k};
+  const grip = el('button', {class: 'grip', title: 'Drag to move. Alt + arrow keys move, Alt + Shift + arrow keys resize.', 'aria-label': 'Move ' + def.title}, '⠿');
+  w.val = el('span', {class: 'wv'}); w.age = el('span', {class: 'wa'}); w.badge = el('span');
+  const ib = el('button', {title: 'About this widget', 'aria-label': 'About ' + def.title, 'aria-expanded': 'false'}, 'i');
+  const xb = el('button', {title: 'Remove', 'aria-label': 'Remove ' + def.title}, '×');
+  w.body = el('div', {class: 'wb'}); w.foot = el('div', {class: 'wf'});
+  const rs = el('button', {class: 'rs', title: 'Drag to resize', 'aria-label': 'Resize ' + def.title, tabindex: '-1'});
+  w.el = el('section', {class: 'w', 'data-k': item.k, 'aria-label': def.title},
+    el('div', {class: 'wh'}, grip, el('span', {class: 'wt'}, def.title), w.badge, w.val, w.age, ib, xb), w.body, w.foot, rs);
+  grip.addEventListener('pointerdown', e => startDrag(e, w, 'move'));
+  rs.addEventListener('pointerdown', e => startDrag(e, w, 'size'));
+  grip.addEventListener('keydown', e => {
+    if (!e.altKey) return;
+    const d = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]}[e.key];
+    if (!d) return; e.preventDefault();
+    if (e.shiftKey) resize(w.k, d[0], d[1]); else move(w.k, d[0] || d[1] * Math.max(1, Math.round(cols() / (w.item.w || w.def.size[0]))));
+  });
+  xb.onclick = () => removeWidget(w.k);
+  ib.onclick = () => {
+    const open = w.el.querySelector('.info');
+    if (open) { open.remove(); ib.setAttribute('aria-expanded', 'false'); return; }
+    const e0 = def.ds[0] && entry(def.ds[0]);
+    w.el.append(el('div', {class: 'info'}, el('p', {}, def.info || (e0 ? e0.title : '')),
+      e0 ? el('p', {}, `Source: ${e0.attribution}. License: ${e0.license}. Update: ${e0.tier}.`) : null));
+    ib.setAttribute('aria-expanded', 'true');
+  };
+  if (!def.dom && !def.pane) {
+    w.chart = new Chart(w.body, w);
+    w.chart.cv.setAttribute('role', 'img'); w.chart.cv.setAttribute('aria-label', def.title + ' chart');
+    w.chart.cv.addEventListener('pointermove', ev => hover(ev, w));
+    w.chart.cv.addEventListener('pointerleave', () => { S.hover = null; $('#tip').hidden = true; redrawAll(); });
+  }
+  return w;
+}
+function hover(ev, w) {
+  const g = w.chart.g; if (!g || !w.chart.opt) return;
+  const r = w.chart.cv.getBoundingClientRect(), x = ev.clientX - r.left, o = w.chart.opt;
+  if (x < g.L || x > g.W - g.R) { S.hover = null; $('#tip').hidden = true; redrawAll(); return; }
+  S.hover = o.a + (x - g.L) / (g.W - g.L - g.R) * (o.b - o.a);
+  const lines = w.chart.valuesAt(S.hover), tip = $('#tip');
+  tip.textContent = ''; for (const l of lines) tip.append(el('div', {}, l));
+  tip.hidden = !lines.length;
+  tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, ev.clientX + 12) + 'px'; tip.style.top = (ev.clientY + 14) + 'px';
+  redrawAll();
+}
+
+// ---------------------------------------------------------------- draw loop
+const dirty = new Set(); let raf = 0;
+function redraw(w) { dirty.add(w); if (!raf) raf = requestAnimationFrame(flush); }
+function redrawAll() { for (const w of W.values()) if (w.chart && w.visible) redraw(w); }
+function flush() { raf = 0; for (const w of dirty) if (w.chart) w.chart.draw(); dirty.clear(); }
+const io = new IntersectionObserver(es => { for (const e of es) { const w = W.get(e.target.dataset.k); if (!w) continue; w.visible = e.isIntersecting; if (w.visible && !w.loaded) load(w); } }, {rootMargin: '200px'});
+const ro = new ResizeObserver(es => { for (const e of es) { const w = W.get(e.target.closest('.w').dataset.k); if (w && w.chart) { w.chart.dirtyBase = true; redraw(w); } } });
+
+function window_() {
+  const b = S.live || S.end == null ? now() : S.end;
+  return [b - S.range, b];
+}
+function staleLevel(id, t) {
+  const e = entry(id); if (!e) return 'error';
+  if (e.status === 'error' || e.status === 'degraded') return e.status;
+  const lim = e.max_age_days ? e.max_age_days * D : 3 * (TIER_S[e.tier] || H);
+  const age = now() - (t || e.newest || e.last_ok || 0);
+  return age > lim * 10 / 3 ? 'error' : age > lim ? 'stale' : 'ok';
+}
+function setHeader(w, value, t, id) {
+  w.val.textContent = value || '';
+  const e = entry(id || w.def.ds[0]);
+  w.age.textContent = t ? fmtAge(now() - t) + ' ago' : '';
+  w.age.title = t ? 'Data time ' + fmtTime(t) : '';
+  const lv = id || w.def.ds[0] ? staleLevel(id || w.def.ds[0], t) : 'ok';
+  w.badge.className = lv === 'ok' ? '' : 'badge b-' + lv;
+  const cv = w.body.querySelector('canvas'); if (cv) cv.setAttribute('aria-label', `${w.def.title}: ${value || ''}${t ? ', data age ' + fmtAge(now() - t) : ''}`);
+  w.badge.textContent = lv === 'ok' ? '' : SHAPE[lv] + ' ' + lv;
+  w.foot.textContent = e ? `${e.attribution}${e.license && e.license !== 'US Government work' ? ' (' + e.license + ')' : ''}` : '';
+}
+async function load(w) {
+  w.loaded = true;
+  try { await RENDER[w.def.type](w); }
+  catch (err) { console.warn(w.k, err); w.body.textContent = ''; w.body.append(el('p', {class: 'empty'}, 'No data: ' + err.message)); }
+}
+function refreshAll() { for (const w of W.values()) { w.loaded = false; if (w.visible) load(w); } }
+function width(w) { return w.body.getBoundingClientRect().width || 600; }
+
+const RENDER = {
+  async W1(w) {
+    const l = await latest('space.scales'); if (!l || !l.record) throw new Error('no scales');
+    const r = l.record, box = el('div', {class: 'scales'});
+    const lab = {R: 'Radio blackout', S: 'Radiation storm', G: 'Geomagnetic storm'};
+    for (const k of ['R', 'S', 'G']) {
+      const v = r.now[k] || 0, mx = r.max24 ? r.max24[k] || 0 : 0;
+      const fc = (r.forecast || []).map(d => k === 'G' ? 'G' + (d.G || 0) : k === 'R' ? (d.R_minor_prob ?? '-') + '%' : (d.S_prob ?? '-') + '%').join(' / ');
+      box.append(el('div', {class: 'sc', style: `background:${v ? SCALE_C[v] : 'var(--panel2)'};color:${v && v < 4 ? '#111' : v ? '#fff' : 'inherit'}`, title: `${lab[k]} level ${v}`},
+        el('b', {}, k + v), el('small', {}, lab[k]), el('small', {}, `24 h max ${k}${mx}`), el('small', {}, `3 d: ${fc}`)));
+    }
+    w.body.textContent = ''; w.body.append(box);
+    setHeader(w, `R${r.now.R || 0} S${r.now.S || 0} G${r.now.G || 0}`, l.t);
+  },
+  async W2(w) {
+    const id = w.def.series, cfg = w.def.cfg, [a, b] = window_();
+    const [m, l] = await Promise.all([meta(id), latest(id)]);
+    if (!m) throw new Error('no data');
+    const colsAll = (m.cols || []).filter(c => c.name !== 'src' && c.name !== 'kind');
+    const colsUse = cfg.cols ? colsAll.filter(c => cfg.cols.includes(c.name)) : colsAll.slice(0, 4);
+    const log = colsUse.some(c => c.q && c.q.type === 'log10');
+    const res = await loadSeries(id, colsUse.map(c => c.name), a, b, width(w));
+    const sum = res && res.tier !== 'r';
+    const series = colsUse.map((c, i) => {
+      const color = PAL[i % PAL.length], g = n => res.cols[n] || {t: new Float64Array(0), y: new Float64Array(0)};
+      if (!sum) return {label: c.label || c.name, color, ...g(c.name)};
+      return {label: c.label || c.name, color, ...g(c.name + '.mean'), lo: g(c.name + '.min'), hi: g(c.name + '.max')};
+    });
+    let marks = [];
+    if (cfg.marks && hasData(cfg.marks)) {
+      for (const ev of await events(cfg.marks, a, b)) if (ev.sev >= 1) marks.push({t: ev.t_start, label: ev.title.split(' ')[0], c: SCALE_C[Math.min(5, ev.sev)]});
+    }
+    const unit = colsUse[0] && colsUse[0].unit;
+    const ret = Math.max(0, ...Object.values(entry(id).retention || {}).map(v => dur(v) || (v === 'full' ? Infinity : 0)));
+    w.chart.set({a, b, log, series, unit, yfix: cfg.yfix, th: (cfg.th || []).map(([v, label]) => ({v, label})), marks, summary: sum,
+      note: (res ? (sum ? res.tier + ' min/mean/max' : 'raw') : 'no data in range') + (ret && b - a > ret * 1.01 ? ` (kept ${fmtAge(ret)})` : '')});
+    const lv = l && l.last && colsUse[0] && l.last[colsUse[0].name];
+    setHeader(w, cfg.val ? cfg.val(l.last || {}) : lv ? fmtNum(lv[1], unit) : '', l && l.t);
+    if (!w.ro) { ro.observe(w.body); w.ro = true; }
+    redraw(w);
+  },
+  async W3(w) {
+    const [a0, b0] = window_(), span = Math.min(S.range, 30 * D), a = b0 - span;
+    const fc = hasData('space.kp-forecast') ? await latest('space.kp-forecast') : null;
+    let b = b0, bars = [];
+    const color = k => SCALE_C[GL(k)] === SCALE_C[0] ? '#2fb38a' : SCALE_C[GL(k)];
+    const res = await loadSeries('space.kp', ['kp'], a, b0, 2000, 'r');
+    if (res && res.cols.kp) { const s = res.cols.kp; for (let i = 0; i < s.t.length; i++) if (s.y[i] === s.y[i]) bars.push({t: s.t[i], w: 3 * H, v: s.y[i], c: color(s.y[i]), label: `Kp ${s.y[i].toFixed(2)} G${GL(s.y[i])}`}); }
+    let lastObs = bars.length ? bars[bars.length - 1].t : 0;
+    if (fc && fc.series) {
+      const sh = fc.series; let t = sh.t0;
+      for (let i = 0; i < sh.n; i++) { t += sh.t[i]; const kp = sh.cols.kp[i] / 100, kind = sh.cols.kind[i]; if (t > lastObs && kind > 0 && kp >= 0) { bars.push({t, w: 3 * H, v: kp, c: color(kp), fc: true, label: `Kp ${kp.toFixed(2)} ${kind === 1 ? 'estimated' : 'predicted'}`}); b = Math.max(b, t + 3 * H); } }
+    }
+    w.chart.set({a, b, series: [], bars, ymin: 0, ymax: 9, th: [[5, 'G1'], [6, 'G2'], [7, 'G3'], [8, 'G4'], [9, 'G5']].map(([v, label]) => ({v, label})), unit: ''});
+    const lk = bars.filter(x => !x.fc).pop();
+    setHeader(w, lk ? `Kp ${lk.v.toFixed(2)} (G${GL(lk.v)})` : '', lk && lk.t + 3 * H, 'space.kp');
+    if (!w.ro) { ro.observe(w.body); w.ro = true; }
+    redraw(w);
+  },
+  async W13(w) {
+    const m = S.man, rows = [];
+    const ids = Object.keys(m.datasets).sort((p, q) => ['error', 'degraded', 'stale', 'ok'].indexOf(m.datasets[p].status) - ['error', 'degraded', 'stale', 'ok'].indexOf(m.datasets[q].status) || p.localeCompare(q));
+    for (const id of ids) {
+      const e = m.datasets[id], use = e.budget_mb ? e.bytes / 1048576 / e.budget_mb : 0;
+      rows.push(el('tr', {},
+        el('td', {class: 'b-' + e.status, title: e.message || ''}, SHAPE[e.status] + ' ' + e.status),
+        el('td', {title: e.title}, id),
+        el('td', {class: 'n'}, fmtAge(e.newest ? now() - e.newest : null)),
+        el('td', {class: 'n'}, fmtMB(e.bytes || 0)),
+        el('td', {title: Math.round(use * 100) + ' % of ' + e.budget_mb + ' MB'}, el('div', {class: 'bar'}, el('i', {style: `width:${Math.min(100, use * 100)}%;${use > 2 ? 'background:var(--err)' : use > 1 ? 'background:var(--stale)' : ''}`}))),
+        el('td', {class: 'wa'}, e.message || '')));
+    }
+    const tot = m.total_bytes;
+    const head = el('p', {style: 'margin:4px 8px'}, `Total ${fmtMB(tot)}: ${(100 * tot / 1048576 / m.budget_mb).toFixed(1)} % of the ${m.budget_mb} MB budget, ${(100 * tot / 1048576 / m.site_limit_mb).toFixed(2)} % of the 1 GB site limit. `,
+      Object.entries(m.counts).map(([k, v]) => `${SHAPE[k]} ${v} ${k}`).join(', '), ...(m.warnings || []).map(x => el('div', {class: 'b-stale'}, '▲ ' + x)));
+    w.body.textContent = '';
+    w.body.append(el('div', {class: 'scroll'}, head, el('table', {}, el('thead', {}, el('tr', {}, ...['Status', 'Dataset', 'Data age', 'Size', 'Budget', 'Message'].map((h, i) => el('th', {class: i === 2 || i === 3 ? 'n' : ''}, h)))), el('tbody', {}, ...rows))));
+    setHeader(w, `${m.counts.ok || 0} of ${ids.length} ok`, m.t, null);
+    w.badge.textContent = ''; w.foot.textContent = `Manifest ${fmtTime(m.t)}, version ${m.version}`;
+  },
+};
+
+// ---------------------------------------------------------------- helpers for the widgets below
+const abs = u => new URL(u, location.href).href;
+// Decode a small shard on the main thread (forecasts in latest.json).
+function inline(sh) {
+  const n = sh.n, t = new Float64Array(n), c = {};
+  if (sh.t) { let x = sh.t0; for (let i = 0; i < n; i++) { x += sh.t[i]; t[i] = x; } } else for (let i = 0; i < n; i++) t[i] = sh.t0 + i * sh.dt;
+  for (const k in sh.cols) { const q = sh.q[k] || {}, a = new Float64Array(n); for (let i = 0; i < n; i++) { const v = sh.cols[k][i]; a[i] = v == null ? NaN : q.type === 'log10' ? Math.pow(10, v / q.scale) : v / (q.scale || 1) + (q.off || 0); } c[k] = a; }
+  return {t, c};
+}
+// Event files ('YYYY-MM' or 'YYYY') of a dataset that touch [a, b].
+function eventFiles(e, a, b) { return ((e && e.files && e.files.root) || []).filter(n => /^\d{4}(-\d\d)?$/.test(n) && keyBounds(n)[1] > a && keyBounds(n)[0] <= b); }
+async function events(id, a, b) {
+  const e = entry(id); if (!hasData(id)) return [];
+  const out = [];
+  for (const n of eventFiles(e, a, b)) for (const ev of (await getJSON(dsUrl(e, 'root', n))).events) if (ev.t_start >= a && ev.t_start <= b) out.push(ev);
+  return out;
+}
+// One series object for the chart from a loadSeries result. Summary tiers give a band.
+function mk(res, name, label, color, extra) {
+  const g = n => (res && res.cols[n]) || {t: new Float64Array(0), y: new Float64Array(0)};
+  const sum = res && res.tier !== 'r';
+  return Object.assign(sum ? {label, color, ...g(name + '.mean'), lo: g(name + '.min'), hi: g(name + '.max')} : {label, color, ...g(name)}, extra || {});
+}
+function nearest(s, t, tol) {
+  if (!s || !s.t.length) return NaN;
+  let lo = 0, hi = s.t.length - 1;
+  while (lo < hi) { const m = (lo + hi) >> 1; s.t[m] < t ? lo = m + 1 : hi = m; }
+  if (lo > 0 && Math.abs(s.t[lo - 1] - t) < Math.abs(s.t[lo] - t)) lo--;
+  return Math.abs(s.t[lo] - t) <= tol ? s.y[lo] : NaN;
+}
+const scaleSpans = text => {
+  // Color the NOAA scale levels (G1 to G5, S1 to S5, R1 to R5) in a text. Text nodes only, no HTML from data.
+  const frag = document.createDocumentFragment(); let last = 0;
+  for (const m of text.matchAll(/\b([GSR])([1-5])\b/g)) {
+    frag.append(text.slice(last, m.index));
+    const lv = +m[2]; frag.append(el('b', {style: `background:${SCALE_C[lv]};color:${lv < 4 ? '#111' : '#fff'};padding:0 2px;border-radius:2px`}, m[0]));
+    last = m.index + m[0].length;
+  }
+  frag.append(text.slice(last)); return frag;
+};
+const AUR = [[10, [59, 15, 112]], [30, [140, 41, 129]], [50, [222, 73, 104]], [70, [254, 159, 109]], [90, [252, 253, 191]]];
+function aurColor(v) {
+  if (v < 3) return null;
+  let i = 0; while (i < AUR.length - 2 && v > AUR[i + 1][0]) i++;
+  const [v0, c0] = AUR[i], [v1, c1] = AUR[i + 1], f = Math.max(0, Math.min(1, (v - v0) / (v1 - v0)));
+  return `rgba(${c0.map((x, k) => Math.round(x + (c1[k] - x) * f)).join(',')},${Math.min(.95, .35 + v / 60)})`;
+}
+let COAST = null;
+async function coast() {
+  if (COAST) return COAST;
+  const j = await getJSON('static/coast-110m.json'), k = j.scale;
+  COAST = j.lines.map(l => { const a = new Float32Array(l.length); let x = 0, y = 0; for (let i = 0; i < l.length; i += 2) { x = i ? x + l[i] : l[i]; y = i ? y + l[i + 1] : l[i + 1]; a[i] = x / k; a[i + 1] = y / k; } return a; });
+  return COAST;
+}
+// Subsolar longitude (degrees) for a time: the page calculates it, the store does not keep it (plan 7.2).
+function sunPos(t) {
+  const d = t / D - 10957.5, g = (357.529 + 0.98560028 * d) * Math.PI / 180, q = 280.459 + 0.98564736 * d;
+  const L = (q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * Math.PI / 180, e = (23.439 - 0.00000036 * d) * Math.PI / 180;
+  const dec = Math.asin(Math.sin(e) * Math.sin(L)), ra = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+  const gmst = (18.697374558 + 24.06570982441908 * d) % 24;
+  let lon = (ra * 180 / Math.PI - gmst * 15) % 360; if (lon > 180) lon -= 360; if (lon < -180) lon += 360;
+  return [dec * 180 / Math.PI, lon];
+}
+
+// ---------------------------------------------------------------- Phase 3 widgets: W4, W5, W11, W12, W14, W15
+Object.assign(DEFS, {
+  wind: {type: 'W4', title: 'Solar wind at L1', ds: ['space.sw-mag', 'space.sw-plasma'], size: [6, 4],
+    info: 'Solar wind from the active spacecraft at L1, approx. 1 hour upstream of Earth. Shaded: southward Bz. A strong southward Bz with high speed and density causes geomagnetic storms.'},
+  aurora: {type: 'W5', title: 'Aurora forecast (OVATION)', ds: ['space.aurora', 'space.hemi-power'], size: [6, 4], pane: true,
+    info: 'OVATION probability of visible aurora for both hemispheres, on 2 degree cells (the maximum of the source cells). One snapshot each hour for 7 days: move the slider. The line points to local midnight. Hemispheric power is the energy into each hemisphere.'},
+  text: {type: 'W12', title: 'SWPC forecast and alerts', ds: ['space.discussion', 'space.3day-forecast', 'space.27day', 'space.alerts'], size: [6, 4], dom: true,
+    info: 'Text products of the NOAA Space Weather Prediction Center. The scale levels are colored. Alerts link to the official issuer.'},
+  neo: {type: 'W14', title: 'Near-Earth object close approaches', ds: ['space.neo-cad', 'space.sentry'], size: [6, 4], dom: true,
+    info: 'Asteroid close approaches in the next 60 days closer than 0.05 au. 1 LD (lunar distance) is 384,400 km. A size with "~" is an estimate from the brightness. The Sentry list gives objects with a small impact probability.'},
+  cycle: {type: 'W15', title: 'Solar cycle', ds: ['space.cycle-observed', 'space.cycle-predicted'], size: [6, 4],
+    info: 'Monthly sunspot number and F10.7 radio flux. Thick line: the 13-month smoothed value. Dashed line and band: the NOAA prediction with its range.'},
+});
+const BIG = {
+  'space.sw-plasma': ['speed', 'Solar wind speed'], 'space.f107': ['f107', 'F10.7 solar flux'],
+  'space.ssn-estimated': ['ssn', 'Sunspot number, estimated'], 'space.kp-1m': ['kp', 'Estimated Kp'],
+  'space.dst': ['dst', 'Dst index'], 'space.hemi-power': ['north', 'Hemispheric power, north'], 'space.sw-mag': ['bz', 'IMF Bz'],
+  'climate.co2-daily': ['value', 'CO2 at Mauna Loa'], 'climate.seaice-north': ['extent', 'Arctic sea ice'], 'climate.nino-weekly': ['nino34_a', 'Nino 3.4 anomaly, weekly'], 'climate.temp-gistemp': ['anom', 'Global temperature anomaly'],
+};
+SERIES['space.geomag'] = {cols: ['BOU_H', 'FRD_H', 'HON_H'], info: 'Horizontal field H at three USGS observatories (Boulder, Fredericksburg, Honolulu). A sudden drop shows a geomagnetic storm.'};
+SERIES['space.ssn-daily'] = {cols: ['ssn'], info: 'SILSO daily total sunspot number (CC BY-NC 4.0).'};
+
+Object.assign(RENDER, {
+  async W4(w) {
+    const [a, b] = window_(), px = width(w);
+    const [m, pl] = await Promise.all([loadSeries('space.sw-mag', ['bz', 'bt'], a, b, px), loadSeries('space.sw-plasma', ['speed', 'density'], a, b, px)]);
+    const sum = (m && m.tier !== 'r') || (pl && pl.tier !== 'r');
+    w.chart.set({a, b, summary: sum, note: sum ? 'min/mean/max' : '', panels: [
+      {series: [mk(m, 'bz', 'Bz GSM', PAL[0], {fillNeg: PAL[6]})], unit: 'nT', th: [{v: 0, label: ''}, {v: -10, label: '-10'}]},
+      {series: [mk(m, 'bt', 'Bt', PAL[1])], unit: 'nT', ymin: 0},
+      {series: [mk(pl, 'speed', 'Speed', PAL[2])], unit: 'km/s', th: [{v: 500, label: '500'}]},
+      {series: [mk(pl, 'density', 'Density', PAL[4])], unit: 'cm^-3', ymin: 0}]});
+    const l = await latest('space.sw-mag'), lp = await latest('space.sw-plasma');
+    const bz = l && l.last.bz, sp = lp && lp.last.speed;
+    setHeader(w, `${bz ? 'Bz ' + fmtNum(bz[1], 'nT') : ''}${sp ? ' · ' + fmtNum(sp[1], 'km/s') : ''}`, bz && bz[0], 'space.sw-mag');
+    if (!w.ro) { ro.observe(w.body); w.ro = true; }
+    redraw(w);
+  },
+  async W5(w) {
+    if (!w.chart) {
+      w.chart = new Pane(w.body, (c, W, Hh) => drawAurora(w, c, W, Hh));
+      w.slider = el('input', {type: 'range', min: 0, max: 0, value: 0, 'aria-label': 'Aurora snapshot time', style: 'position:absolute;left:8px;right:8px;bottom:2px;width:calc(100% - 16px)'});
+      w.slider.oninput = () => { w.idx = +w.slider.value; redraw(w); };
+      w.body.append(w.slider); ro.observe(w.body);
+    }
+    const e = entry('space.aurora'), days = e.files.root.filter(k => /^\d{4}-\d\d-\d\d$/.test(k)).slice(-8);
+    const parts = await Promise.all(days.map(d => RPC('grid', {url: abs(dsUrl(e, 'root', d))})));
+    w.snaps = parts.flatMap(p => p.snaps.map(s => ({t: s.t, v: s.v, g: p.grid}))).sort((p, q) => p.t - q.t);
+    if (!w.snaps.length) throw new Error('no snapshots');
+    w.coast = await coast();
+    const t1 = w.snaps[w.snaps.length - 1].t;
+    w.hp = await loadSeries('space.hemi-power', ['north', 'south'], t1 - 8 * D, t1 + H, 2000).catch(() => null);
+    w.slider.max = w.snaps.length - 1; w.slider.value = w.idx = w.snaps.length - 1;
+    const hn = w.hp && nearest(w.hp.cols.north || w.hp.cols['north.mean'], t1, 2 * H);
+    setHeader(w, hn === hn && hn != null ? `North ${fmtNum(hn, 'GW')}` : '', t1, 'space.aurora');
+    redraw(w);
+  },
+  async W11(w) {
+    const id = w.def.ds[0], [m, l] = await Promise.all([meta(id), latest(id)]);
+    const cols = ((m && m.cols) || []).filter(c => c.name !== 'src' && c.name !== 'kind');
+    const c = cols.find(x => x.name === w.def.col) || cols[0];
+    const lv = c && l && l.last && l.last[c.name]; if (!lv) throw new Error('no value');
+    const [t, v] = lv, e = entry(id);
+    const ret = Math.max(0, ...Object.values(e.retention || {}).map(x => x === 'full' ? 200 * Y : dur(x) || 0)) || Y;
+    const [hist, rec] = await Promise.all([loadSeries(id, [c.name], t - Math.min(ret, 60 * Y), t + 1, 4000), loadSeries(id, [c.name], t - 8 * D, t + 1, 300)]);
+    const col = r => r && (r.cols[c.name] || r.cols[c.name + '.mean']);
+    const hc = col(hist), rc = col(rec);
+    const d24 = v - nearest(rc, t - D, 3 * H), d1y = v - nearest(hc, t - Y, 20 * D);
+    const vals = hc ? Array.from(hc.y).filter(x => x === x) : [];
+    const pct = vals.length > 10 ? Math.round(100 * vals.filter(x => x <= v).length / vals.length) : null;
+    const span = hc && hc.t.length ? hc.t[hc.t.length - 1] - hc.t[0] : 0;
+    const ord = n => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
+    const sgn = x => x === x ? (x > 0 ? '+' : '') + fmtNum(x) : '-';
+    const spark = el('div', {style: 'position:relative;height:34px;margin:2px 0'});
+    w.body.textContent = '';
+    w.body.append(el('div', {style: 'padding:2px 8px'},
+      el('div', {style: 'font-size:26px;font-weight:600;line-height:1.1'}, fmtNum(v), el('small', {style: 'font-size:13px;color:var(--muted)'}, ' ' + (c.unit || ''))),
+      spark,
+      el('div', {class: 'wa'}, `24 h: ${sgn(d24)} · 1 y: ${sgn(d1y)}`),
+      el('div', {class: 'wa'}, pct == null ? '' : `${ord(pct)} percentile of ${fmtAge(span)} (${hist.tier === 'r' ? 'raw' : hist.tier + ' mean'})`)));
+    w.chart = new Pane(spark, (cx, W, Hh) => {
+      if (!rc || rc.t.length < 2) return;
+      let lo = Infinity, hi = -Infinity; for (const y of rc.y) if (y === y) { lo = Math.min(lo, y); hi = Math.max(hi, y); }
+      const X = tt => (tt - rc.t[0]) / (rc.t[rc.t.length - 1] - rc.t[0]) * (W - 2) + 1, Yy = y => Hh - 2 - (y - lo) / ((hi - lo) || 1) * (Hh - 4);
+      cx.strokeStyle = COL.accent; cx.lineWidth = 1.2; cx.beginPath(); let pen = false;
+      for (let i = 0; i < rc.t.length; i++) { const y = rc.y[i]; if (y !== y) { pen = false; continue; } pen ? cx.lineTo(X(rc.t[i]), Yy(y)) : cx.moveTo(X(rc.t[i]), Yy(y)); pen = true; }
+      cx.stroke();
+    });
+    redraw(w);
+    setHeader(w, '', t);
+  },
+  async W12(w) {
+    const tabs = [['space.discussion', 'Discussion'], ['space.3day-forecast', '3-day'], ['space.27day', '27-day'], ['space.alerts', 'Alerts']].filter(([id]) => hasData(id));
+    w.tab = w.tab || tabs[0][0];
+    const bar = el('div', {class: 'grp', role: 'tablist', style: 'padding:4px 8px'});
+    for (const [id, lab] of tabs) bar.append(el('button', {role: 'tab', 'aria-selected': String(id === w.tab), 'aria-pressed': String(id === w.tab), onclick: () => { w.tab = id; load(w); }}, lab));
+    const box = el('div', {class: 'scroll', style: 'height:calc(100% - 34px);padding:0 8px 8px'});
+    const l = await latest(w.tab);
+    if (w.tab === 'space.alerts') {
+      const act = await getJSON(dsUrl(entry('space.alerts'), 'root', 'active'));
+      for (const ev of act.events.slice(0, 60)) {
+        const d = el('details', {}, el('summary', {}, el('span', {class: 'wa'}, fmtTime(ev.t_start) + ' '), ev.sev ? el('b', {style: `background:${SCALE_C[ev.sev]};color:#111;padding:0 3px;border-radius:2px`}, String(ev.sev)) : '', ' ' + ev.title),
+          el('pre', {style: 'white-space:pre-wrap;font-size:11.5px'}, scaleSpans((ev.extra && ev.extra.text) || '')),
+          el('a', {href: ev.url, target: '_blank', rel: 'noopener'}, 'Official source: NOAA SWPC'));
+        box.append(d);
+      }
+      setHeader(w, `${act.events.length} messages`, l && l.t, 'space.alerts');
+    } else {
+      box.append(el('pre', {style: 'white-space:pre-wrap;font-size:12px;margin:4px 0'}, scaleSpans(l.issue.text)),
+        el('a', {href: 'https://www.swpc.noaa.gov/', target: '_blank', rel: 'noopener'}, 'Official source: NOAA SWPC'));
+      setHeader(w, 'Issued ' + fmtTime(l.issue.t), l.issue.t, w.tab);
+    }
+    w.body.textContent = ''; w.body.append(bar, box);
+  },
+  async W14(w) {
+    const e = entry('space.neo-cad'), act = await getJSON(dsUrl(e, 'root', 'active'));
+    const t0 = now() - D, list = act.events.filter(x => x.t_start >= t0).sort((p, q) => p.t_start - q.t_start).slice(0, 25);
+    const maxLd = Math.max(1, ...list.map(x => x.mag || 0));
+    const rows = list.map(x => el('tr', {},
+      el('td', {}, fmtTime(x.t_start).slice(0, 16)), el('td', {}, x.extra.des),
+      el('td', {class: 'n'}, fmtNum(x.mag) + ' LD'),
+      el('td', {}, el('div', {class: 'bar', title: (x.extra.dist_au || 0).toFixed(4) + ' au'}, el('i', {style: `width:${100 * (x.mag || 0) / maxLd}%;${x.mag < 1 ? 'background:var(--err)' : ''}`}))),
+      el('td', {class: 'n'}, x.extra.size_m ? (x.extra.size_est ? '~' : '') + x.extra.size_m + ' m' : '-'),
+      el('td', {class: 'n'}, fmtNum(x.extra.v_rel, 'km/s'))));
+    const sen = hasData('space.sentry') ? (await latest('space.sentry')).record : null;
+    const top = sen && sen.objects[0];
+    w.body.textContent = '';
+    w.body.append(el('div', {class: 'scroll'}, el('table', {}, el('thead', {}, el('tr', {}, ...['Time', 'Object', 'Distance', '', 'Size', 'Speed'].map((h, i) => el('th', {class: i === 2 || i > 3 ? 'n' : ''}, h)))), el('tbody', {}, ...rows)),
+      sen ? el('p', {class: 'wa', style: 'margin:6px 8px'}, `Sentry list: ${sen.count} objects. Highest cumulative Palermo scale: ${top.ps_cum} (${top.des}, ${top.range}). `, el('a', {href: 'https://cneos.jpl.nasa.gov/sentry/', target: '_blank', rel: 'noopener'}, 'CNEOS')) : null));
+    const next = list.find(x => x.t_start >= now());
+    setHeader(w, next ? `${next.extra.des}: ${fmtNum(next.mag)} LD in ${fmtAge(next.t_start - now())}` : '', act.events.length ? e.newest : null, 'space.neo-cad');
+  },
+  async W15(w) {
+    const fc = hasData('space.cycle-predicted') ? await latest('space.cycle-predicted') : null;
+    const p = fc && inline(fc.series);
+    const b = p ? p.t[p.t.length - 1] + 31 * D : now() + Y, a = Date.UTC(1996, 0, 1) / 1000;
+    const o = await loadSeries('space.cycle-observed', ['ssn', 'ssn_smooth', 'f107', 'f107_smooth'], a, b, 2000, 'r');
+    const ser = n => (o && o.cols[n]) || {t: new Float64Array(0), y: new Float64Array(0)};
+    const pred = (k, lo, hi, label) => p ? {label, color: COL.muted, t: p.t, y: p.c[k], dash: true, lo: {t: p.t, y: p.c[lo]}, hi: {t: p.t, y: p.c[hi]}} : {t: [], y: []};
+    w.chart.set({a, b, panels: [
+      {series: [{label: 'Sunspot number', color: PAL[0], w: .8, ...ser('ssn')}, {label: 'smoothed', color: PAL[1], w: 2, ...ser('ssn_smooth')}, pred('predicted_ssn', 'low_ssn', 'high_ssn', 'predicted')], ymin: 0},
+      {series: [{label: 'F10.7', color: PAL[2], w: .8, ...ser('f107')}, {label: 'smoothed', color: PAL[4], w: 2, ...ser('f107_smooth')}, pred('predicted_f107', 'low_f107', 'high_f107', 'predicted')], unit: 'sfu', ymin: 50}]});
+    const s = ser('ssn_smooth'); let k = s.y.length - 1; while (k > 0 && !(s.y[k] === s.y[k])) k--;
+    setHeader(w, k >= 0 && s.y.length ? `Smoothed SSN ${fmtNum(s.y[k])}` : '', entry('space.cycle-observed').newest, 'space.cycle-observed');
+    if (!w.ro) { ro.observe(w.body); w.ro = true; }
+    redraw(w);
+  },
+});
+function drawAurora(w, c, W, Hh) {
+  if (!w.snaps || !w.coast) return;
+  const s = w.snaps[w.idx] || w.snaps[w.snaps.length - 1], g = s.g, Hd = Hh - 22;
+  const R = Math.max(20, Math.min(W / 4 - 10, Hd / 2 - 20)), cy = Hd / 2 + 14;
+  c.font = '10.5px ' + getComputedStyle(document.body).fontFamily;
+  const midLon = sunPos(s.t)[1] + 180;
+  for (const [north, cx] of [[true, W / 4], [false, 3 * W / 4]]) {
+    const proj = (lat, lon) => { const r = (90 - (north ? lat : -lat)) / 50 * R, th = lon * Math.PI / 180; return [cx + r * Math.sin(th), north ? cy + r * Math.cos(th) : cy - r * Math.cos(th)]; };
+    c.save(); c.beginPath(); c.arc(cx, cy, R, 0, 2 * Math.PI); c.fillStyle = COL.panel; c.fill(); c.clip();
+    // cells
+    for (let i = 0; i < g.nlat; i++) {
+      const lat = g.lat0 + i * g.d; if (north ? lat < 39 : lat > -39) continue;
+      for (let j = 0; j < g.nlon; j++) {
+        const col = aurColor(s.v[i * g.nlon + j]); if (!col) continue;
+        const lon = g.lon0 + j * g.d, h = g.d / 2;
+        const p = [proj(lat - h, lon - h), proj(lat - h, lon + h), proj(lat + h, lon + h), proj(lat + h, lon - h)];
+        c.fillStyle = col; c.beginPath(); c.moveTo(...p[0]); for (let k = 1; k < 4; k++) c.lineTo(...p[k]); c.fill();
+      }
+    }
+    // coastlines
+    c.strokeStyle = COL.muted; c.lineWidth = .7; c.beginPath();
+    for (const l of w.coast) { let pen = false; for (let k = 0; k < l.length; k += 2) { const lat = l[k + 1]; if (north ? lat < 35 : lat > -35) { pen = false; continue; } const [x, y] = proj(lat, l[k]); pen ? c.lineTo(x, y) : c.moveTo(x, y); pen = true; } }
+    c.stroke();
+    // latitude rings and the midnight direction
+    c.strokeStyle = COL.grid; for (const r of [50, 60, 70, 80]) { c.beginPath(); c.arc(cx, cy, (90 - r) / 50 * R, 0, 2 * Math.PI); c.stroke(); }
+    c.restore();
+    const [mx, my] = proj(north ? 40 : -40, midLon);
+    c.strokeStyle = COL.text; c.setLineDash([2, 3]); c.beginPath(); c.moveTo(cx, cy); c.lineTo(mx, my); c.stroke(); c.setLineDash([]);
+    c.strokeStyle = COL.line; c.beginPath(); c.arc(cx, cy, R, 0, 2 * Math.PI); c.stroke();
+    const hpc = w.hp && (w.hp.cols[north ? 'north' : 'south'] || w.hp.cols[north ? 'north.mean' : 'south.mean']);
+    const hp = nearest(hpc, s.t, 2 * H);
+    c.fillStyle = COL.text; c.textAlign = 'left'; c.textBaseline = 'top';
+    c.fillText(`${north ? 'North' : 'South'}${hp === hp ? ' · ' + fmtNum(hp, 'GW') : ''}`, cx - R, 2);
+  }
+  c.textAlign = 'right'; c.fillStyle = COL.muted; c.fillText(fmtTime(s.t), W - 6, 2);
+  // color legend
+  for (let v = 10; v <= 90; v += 2) { c.fillStyle = aurColor(v); c.fillRect(W / 2 - 40 + (v - 10), 18, 2, 6); }
+  c.fillStyle = COL.muted; c.textAlign = 'right'; c.textBaseline = 'top'; c.fillText('10 %', W / 2 - 44, 15); c.textAlign = 'left'; c.fillText('90 %', W / 2 + 44, 15);
+}
+
+// ---------------------------------------------------------------- Phase 4 widgets: W6, W7, W8, W9
+// Event layers. Colors: PAGER and GDACS levels, Saffir-Simpson, official where a scale exists. Shapes also differ.
+const PAGER_C = ['#9aa5b1', '#00b04f', '#f5e400', '#ff9900', '#e8000b', '#a00000'];
+const SS_C = ['#5ebaff', '#ffffcc', '#ffe775', '#ffc140', '#ff8f20', '#ff6060'];
+const LAYERS = [
+  ['geo.quakes', 'Earthquakes', 'o', e => PAGER_C[e.sev]], ['geo.gdacs', 'GDACS alerts', '^', e => PAGER_C[e.sev]],
+  ['weather.ibtracs', 'Cyclones', 's', e => SS_C[e.sev]], ['weather.nhc', 'NHC storms', 's', e => SS_C[e.sev]],
+  ['geo.eonet', 'EONET events', 'd', () => '#c77dba'], ['geo.tsunami-ntwc', 'Tsunami NTWC', 'q', e => PAGER_C[Math.max(1, e.sev)]],
+  ['geo.tsunami-ptwc', 'Tsunami PTWC', 'q', e => PAGER_C[Math.max(1, e.sev)]], ['geo.volcanoes', 'Volcanoes (USGS)', 'v', e => PAGER_C[e.sev + 1]],
+];
+const LYR = Object.fromEntries(LAYERS.map(l => [l[0], l]));
+// Events for a range: active lists (current state) and stored files (quakes; M4.5+ only above 30 days).
+async function allEvents(a, b) {
+  const out = [];
+  await Promise.all(LAYERS.map(async ([id]) => {
+    if (!hasData(id)) return;
+    let list = id === 'geo.quakes' ? await events(id, a, b) : (await getJSON(dsUrl(entry(id), 'root', 'active'))).events;
+    if (id === 'geo.quakes' && b - a > 30 * D) list = list.filter(e => e.mag >= 4.5);
+    for (const e of list) if ((e.t_end || e.t_start) >= a - (id === 'geo.quakes' ? 0 : 7 * D)) out.push(Object.assign({ds: id}, e));
+  }));
+  return out.sort((p, q) => q.sev - p.sev || q.t_start - p.t_start);
+}
+function mark(c, shape, x, y, r, col) {
+  c.fillStyle = col; c.strokeStyle = 'rgba(0,0,0,.6)'; c.lineWidth = .8; c.beginPath();
+  if (shape === 'o') c.arc(x, y, r, 0, 7);
+  else if (shape === '^' || shape === 'v') { const k = shape === '^' ? 1 : -1; c.moveTo(x, y - r * k); c.lineTo(x + r, y + r * k); c.lineTo(x - r, y + r * k); }
+  else if (shape === 'd') { c.moveTo(x, y - r); c.lineTo(x + r, y); c.lineTo(x, y + r); c.lineTo(x - r, y); }
+  else c.rect(x - r * .8, y - r * .8, r * 1.6, r * 1.6);
+  c.closePath(); c.fill(); c.stroke();
+}
+function focus(ev) { S.focus = ev; S.hover = ev.t_start; for (const w of W.values()) if (w.def.type === 'W6' || w.def.type === 'W7') load(w); redrawAll(); }
+function drawMap(w, c, W0, Hh) {
+  if (!w.ev || !w.coast) return;
+  Hh -= w.leg.offsetHeight + 4;
+  const Wd = Math.min(W0, Hh * 2), H2 = Wd / 2, ox = (W0 - Wd) / 2, X = lon => ox + (lon + 180) / 360 * Wd, Y = lat => (90 - lat) / 180 * H2;
+  if (!w.base || w.base.width !== Math.round(W0 * devicePixelRatio) || w.baseTheme !== COL.panel) {
+    const b = w.base = document.createElement('canvas'); b.width = Math.round(W0 * devicePixelRatio); b.height = Math.round(Hh * devicePixelRatio); w.baseTheme = COL.panel;
+    const k = b.getContext('2d'); k.scale(devicePixelRatio, devicePixelRatio);
+    k.fillStyle = COL.panel; k.fillRect(ox, 0, Wd, H2);
+    if (w.fire) { const g = w.fire.grid, v = w.fire.snaps[0].v; for (let i = 0; i < g.nlat; i++) for (let j = 0; j < g.nlon; j++) { const n = v[i * g.nlon + j]; if (n > 0) { k.fillStyle = `rgba(255,${Math.max(40, 200 - 50 * Math.log10(n))},0,${Math.min(.9, .25 + .2 * Math.log10(n))})`; const lat = g.lat0 + i * g.d, lon = g.lon0 + j * g.d; k.fillRect(X(lon - g.d / 2), Y(lat + g.d / 2), Wd / g.nlon + .5, H2 / g.nlat + .5); } } }
+    k.strokeStyle = COL.muted; k.lineWidth = .6; k.beginPath();
+    for (const l of w.coast) for (let i = 0; i < l.length; i += 2) { const x = X(l[i]), y = Y(l[i + 1]); i && Math.abs(l[i] - l[i - 2]) < 180 ? k.lineTo(x, y) : k.moveTo(x, y); }
+    k.stroke();
+  }
+  c.drawImage(w.base, 0, 0, W0, Hh);
+  // night side: the page calculates the day/night line (plan 7.2)
+  const [dec, slon] = sunPos(now()), td = Math.tan(dec * Math.PI / 180) || 1e-6;
+  c.fillStyle = 'rgba(0,0,20,.28)'; c.beginPath();
+  for (let lon = -180; lon <= 180; lon += 2) c.lineTo(X(lon), Y(Math.atan(-Math.cos((lon - slon) * Math.PI / 180) / td) * 180 / Math.PI));
+  c.lineTo(X(180), dec > 0 ? H2 : 0); c.lineTo(X(-180), dec > 0 ? H2 : 0); c.fill();
+  w.pts = [];
+  for (const e of w.ev) {
+    const L = LYR[e.ds]; if (e.lat == null || w.off[e.ds]) continue;
+    if (e.extra && e.extra.track) { c.strokeStyle = L[3](e); c.lineWidth = 1.2; c.beginPath(); e.extra.track.forEach(([, la, lo], i) => { lo = lo > 180 ? lo - 360 : lo; i ? c.lineTo(X(lo), Y(la)) : c.moveTo(X(lo), Y(la)); }); c.stroke(); }
+    const x = X(e.lon > 180 ? e.lon - 360 : e.lon), y = Y(e.lat), r = e.ds === 'geo.quakes' ? Math.max(1.5, (e.mag - 2) * 1.6) : 4 + e.sev;
+    mark(c, L[2], x, y, r, L[3](e)); w.pts.push([x, y, e]);
+    if (S.focus && S.focus.id === e.id) { c.strokeStyle = COL.accent; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r + 6, 0, 7); c.stroke(); }
+  }
+}
+Object.assign(DEFS, {
+  map: {type: 'W6', title: 'World events', ds: ['geo.quakes'], size: [12, 5], pane: true,
+    info: 'Earthquakes (circle size by magnitude, PAGER colors), GDACS alerts (triangles), cyclone tracks (Saffir-Simpson colors), EONET events (diamonds), tsunami messages (squares), and fire density from VIIRS (1 degree cells). The shaded part is night. Click a layer name to hide it. The USGS volcano list has no coordinates; see the event list.'},
+  events: {type: 'W7', title: 'Event list', ds: ['geo.quakes'], size: [6, 4], dom: true,
+    info: 'All events in the time range, sorted by severity, then by time. Severity is 0 to 5 from the source scale (PAGER, GDACS, Saffir-Simpson, volcano color code). Click a row to show it on the map.'},
+  timeline: {type: 'W8', title: 'Event timeline', ds: ['geo.quakes'], size: [6, 3], pane: true,
+    info: 'One lane for each event type. The size shows the severity.'},
+  calendar: {type: 'W9', title: 'Calendar', ds: ['space.kp'], size: [12, 2], pane: true,
+    info: 'One cell for each day (UTC): daily maximum Kp (G-level colors), the number of M4.5+ earthquakes, and the number of VIIRS fire detections in 24 h.'},
+});
+Object.assign(RENDER, {
+  async W6(w) {
+    if (!w.chart) {
+      w.off = {}; w.chart = new Pane(w.body, (c, W0, Hh) => drawMap(w, c, W0, Hh)); ro.observe(w.body);
+      w.chart.cv.addEventListener('pointermove', ev => { const r = w.chart.cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top; const p = (w.pts || []).find(q => Math.hypot(q[0] - x, q[1] - y) < 7); const tip = $('#tip'); tip.hidden = !p; if (p) { tip.textContent = `${p[2].title} · ${fmtTime(p[2].t_start)} · sev ${p[2].sev}`; tip.style.left = ev.clientX + 12 + 'px'; tip.style.top = ev.clientY + 12 + 'px'; } });
+      w.chart.cv.addEventListener('pointerleave', () => { $('#tip').hidden = true; });
+      w.chart.cv.addEventListener('click', ev => { const r = w.chart.cv.getBoundingClientRect(); const p = (w.pts || []).find(q => Math.hypot(q[0] - ev.clientX + r.left, q[1] - ev.clientY + r.top) < 7); if (p) focus(p[2]); });
+      w.leg = el('div', {style: 'position:absolute;left:6px;bottom:2px;font-size:11px;display:flex;flex-wrap:wrap;gap:2px 8px'}); w.body.append(w.leg);
+    }
+    const [a, b] = window_();
+    w.coast = await coast();
+    w.fire = hasData('weather.fires') ? await RPC('grid', {url: abs(dsUrl(entry('weather.fires'), 'root', 'latest'))}) : null;
+    w.ev = await allEvents(a, b); w.base = null;
+    w.leg.textContent = '';
+    for (const [id, lab] of LAYERS) if (hasData(id) && id !== 'geo.volcanoes') w.leg.append(el('button', {style: 'padding:0 4px;opacity:' + (w.off[id] ? .4 : 1), 'aria-pressed': String(!w.off[id]), onclick: () => { w.off[id] = !w.off[id]; load(w); }}, `${lab} ${w.ev.filter(e => e.ds === id).length}`));
+    const q = w.ev.filter(e => e.ds === 'geo.quakes');
+    setHeader(w, q.length ? `Largest M${fmtNum(Math.max(...q.map(e => e.mag)))}` : '', entry('geo.quakes').newest, 'geo.quakes');
+    redraw(w);
+  },
+  async W7(w) {
+    const [a, b] = window_(), list = (await allEvents(a, b)).slice(0, 150);
+    w.body.textContent = '';
+    const rows = list.map(e => el('tr', {tabindex: '0', style: 'cursor:pointer' + (S.focus && S.focus.id === e.id ? ';background:var(--panel2)' : ''), onclick: () => focus(e), onkeydown: k => { if (k.key === 'Enter') focus(e); }},
+      el('td', {}, el('b', {style: `background:${LYR[e.ds][3](e)};color:#111;padding:0 4px;border-radius:2px`}, String(e.sev))),
+      el('td', {class: 'wa'}, LYR[e.ds][1]), el('td', {style: 'white-space:normal'}, e.title, ' ', e.url ? el('a', {href: e.url, target: '_blank', rel: 'noopener', onclick: k => k.stopPropagation()}, '↗') : ''),
+      el('td', {class: 'n wa'}, fmtTime(e.t_start))));
+    w.body.append(el('div', {class: 'scroll'}, el('table', {}, el('tbody', {}, ...rows))));
+    setHeader(w, `${list.length} events`, null, null); w.badge.textContent = ''; w.foot.textContent = 'USGS, GDACS (EC JRC, UN OCHA), NASA EONET, NOAA NHC, NCEI IBTrACS, NWS TWC';
+  },
+  async W8(w) {
+    if (!w.chart) { w.chart = new Pane(w.body, (c, W0, Hh) => drawTimeline(w, c, W0, Hh)); ro.observe(w.body); }
+    [w.a, w.b] = window_(); w.ev = await allEvents(w.a, w.b);
+    if (hasData('space.xray-flares')) for (const e of await events('space.xray-flares', w.a, w.b)) if (e.sev) w.ev.push(Object.assign({ds: 'flare'}, e));
+    setHeader(w, `${w.ev.length} events`, null, null); w.badge.textContent = ''; redraw(w);
+  },
+  async W9(w) {
+    if (!w.chart) { w.chart = new Pane(w.body, (c, W0, Hh) => drawCalendar(w, c, W0, Hh)); ro.observe(w.body); }
+    const t1 = Math.floor(now() / D) * D, t0 = t1 - 365 * D;
+    const kp = await loadSeries('space.kp', ['kp'], t0, t1 + D, 4000, 'd1').catch(() => null);
+    const fire = await loadSeries('weather.fires', ['count'], t0, t1 + D, 4000, 'r').catch(() => null);
+    const qk = hasData('geo.quakes') ? (await events('geo.quakes', t0, t1 + D)).filter(e => e.mag >= 4.5) : [];
+    const day = t => Math.floor(t / D), m = [new Map(), new Map(), new Map()];
+    const put = (k, s) => { if (s) for (let i = 0; i < s.t.length; i++) if (s.y[i] === s.y[i]) m[k].set(day(s.t[i]), Math.max(m[k].get(day(s.t[i])) || 0, s.y[i])); };
+    put(0, kp && kp.cols['kp.max']); put(2, fire && fire.cols.count);
+    for (const e of qk) m[1].set(day(e.t_start), (m[1].get(day(e.t_start)) || 0) + 1);
+    w.cal = {m, t1}; redraw(w); setHeader(w, '', null, null); w.badge.textContent = '';
+  },
+});
+function drawTimeline(w, c, W0, Hh) {
+  if (!w.ev) return;
+  const lanes = [...new Set(w.ev.map(e => e.ds))], L = 92, x = t => L + (t - w.a) / (w.b - w.a) * (W0 - L - 8), lh = (Hh - 18) / Math.max(1, lanes.length);
+  c.font = '10.5px ' + getComputedStyle(document.body).fontFamily; c.textBaseline = 'middle';
+  lanes.forEach((id, k) => { const y = k * lh + lh / 2; c.fillStyle = COL.muted; c.textAlign = 'left'; c.fillText(id === 'flare' ? 'X-ray flares' : LYR[id][1], 2, y); c.strokeStyle = COL.grid; c.beginPath(); c.moveTo(L, y); c.lineTo(W0 - 8, y); c.stroke(); });
+  c.textAlign = 'center'; c.textBaseline = 'top'; c.fillStyle = COL.muted;
+  for (const [t, lab] of timeTicks(w.a, w.b, W0 - L)) c.fillText(lab, x(t), Hh - 14);
+  for (const e of w.ev) { const k = lanes.indexOf(e.ds), t = Math.max(w.a, e.t_start); mark(c, e.ds === 'flare' ? 'o' : LYR[e.ds][2], x(t), k * lh + lh / 2, 2 + e.sev, e.ds === 'flare' ? SCALE_C[e.sev] : LYR[e.ds][3](e)); }
+}
+function drawCalendar(w, c, W0, Hh) {
+  if (!w.cal) return;
+  const {m, t1} = w.cal, L = 92, cs = Math.max(4, Math.min(16, (Hh - 8) / 3 - 2)), n = Math.min(365, Math.floor((W0 - L) / (cs + 1)));
+  const rows = [['Max Kp', v => SCALE_C[GL(v)] === SCALE_C[0] ? `rgba(47,179,138,${.2 + v / 8})` : SCALE_C[GL(v)]], ['M4.5+ quakes', v => `rgba(230,159,0,${Math.min(1, .15 + v / 12)})`], ['Fires', v => `rgba(229,96,59,${Math.min(1, .1 + Math.log10(v + 1) / 5.5)})`]];
+  c.font = '10.5px ' + getComputedStyle(document.body).fontFamily; c.textBaseline = 'middle';
+  rows.forEach(([lab, col], k) => {
+    const y = 4 + k * (cs + 2); c.fillStyle = COL.muted; c.textAlign = 'left'; c.fillText(lab, 2, y + cs / 2);
+    for (let i = 0; i < n; i++) { const d = Math.floor(t1 / D) - (n - 1 - i), v = m[k].get(d); c.fillStyle = v == null ? COL.grid : col(v); c.fillRect(L + i * (cs + 1), y, cs, cs); }
+  });
+  w.calN = n;
+}
+
+// ---------------------------------------------------------------- Phase 5 widgets: W10, W16
+const CLIM = {'climate.temp-ncei': 'anom', 'climate.temp-gistemp': 'anom', 'climate.co2-monthly': 'value', 'climate.co2-daily': 'value!',
+  'climate.co2-global': 'value', 'climate.ch4-global': 'value', 'climate.n2o-global': 'value', 'climate.sf6-global': 'value',
+  'climate.seaice-north': 'extent!', 'climate.seaice-south': 'extent!', 'climate.oni': 'anom', 'climate.nino-weekly': 'nino34_a',
+  'climate.ao': 'index', 'climate.nao': 'index', 'climate.aao': 'index', 'climate.pna': 'index', 'climate.ozone-hole': 'area!',
+  'climate.gmsl': 'gmsl', 'climate.mjo': 'amplitude', 'space.ssn-daily': 'ssn'};   // '!' = seasonal overlay first
+const RDBU = [[33, 102, 172], [103, 169, 207], [209, 229, 240], [247, 247, 247], [253, 219, 199], [239, 138, 98], [178, 24, 43]];
+function rdbu(f) { f = Math.max(0, Math.min(1, f)) * 6; const i = Math.min(5, Math.floor(f)), a = RDBU[i], b = RDBU[i + 1], k = f - i; return a.map((x, j) => Math.round(x + (b[j] - x) * k)); }
+const OCEAN = [['ocean.sst-anom', 'SST', 3], ['ocean.sla', 'Sea level', 0.3], ['ocean.coral-alert', 'Coral alert', 4]];
+Object.assign(DEFS, {
+  ocean: {type: 'W16', title: 'Ocean anomaly', ds: ['ocean.sst-anom'], size: [12, 5], pane: true,
+    info: 'Sea surface temperature anomaly (OISST v2.1) or sea level anomaly (altimetry) on 1 degree cells. Blue is below normal, red is above normal, white is zero. The box is the Nino 3.4 region. The slider moves over 90 days of daily maps and 2 years of weekly means. Gray: land or ice.'},
+});
+Object.assign(RENDER, {
+  async W10(w) {
+    const id = w.def.ds[0], cf = CLIM[id] || '', col = cf.replace('!', ''), m = await meta(id);
+    if (w.season == null) w.season = cf.endsWith('!');
+    const c = (m.cols || []).find(x => x.name === col) || m.cols[0];
+    const r = await loadSeries(id, [c.name], Date.UTC(1700, 0, 1) / 1000, now() + 400 * D, 6000, 'r');
+    const s = r && r.cols[c.name]; if (!s || !s.t.length) throw new Error('no data');
+    const n = s.t.length, a0 = s.t[0], b0 = s.t[n - 1];
+    if (!w.tb) { w.tb = el('button', {style: 'position:absolute;right:8px;bottom:20px;z-index:1;font-size:11px', onclick: () => { w.season = !w.season; load(w); }}); w.body.append(w.tb); }
+    w.tb.textContent = w.season ? 'Show trend' : 'Show seasons';
+    let opt;
+    if (w.season) {
+      // One line for each year on a common time axis (January to December).
+      const yrs = new Map();
+      for (let i = 0; i < n; i++) { const d = new Date(s.t[i] * 1000), y = d.getUTCFullYear(); if (!yrs.has(y)) yrs.set(y, [[], []]); const e = yrs.get(y); e[0].push((s.t[i] - Date.UTC(y, 0, 1) / 1000)); e[1].push(s.y[i]); }
+      const ys = [...yrs.keys()].slice(-12), last = ys[ys.length - 1];
+      opt = {a: 0, b: 364 * D, unit: c.unit, series: ys.map((y, i) => ({label: y >= last - 1 ? String(y) : '', color: y === last ? COL.accent : y === last - 1 ? PAL[1] : COL.muted, w: y === last ? 2.2 : y === last - 1 ? 1.5 : .7, t: yrs.get(y)[0], y: yrs.get(y)[1]}))};
+      opt.series.sort((p, q) => (p.w || 0) - (q.w || 0));
+    } else {
+      // Running 12-month mean and a least-squares trend line.
+      const rm = new Float64Array(n); let j = 0, sum = 0, cnt = 0;
+      for (let i = 0; i < n; i++) { if (s.y[i] === s.y[i]) { sum += s.y[i]; cnt++; } while (s.t[j] < s.t[i] - Y + D) { if (s.y[j] === s.y[j]) { sum -= s.y[j]; cnt--; } j++; } rm[i] = cnt && s.t[i] - s.t[0] >= Y - 32 * D ? sum / cnt : NaN; }
+      let sx = 0, sy = 0, sxx = 0, sxy = 0, k = 0;
+      for (let i = 0; i < n; i++) if (s.y[i] === s.y[i]) { const x = (s.t[i] - a0) / Y; sx += x; sy += s.y[i]; sxx += x * x; sxy += x * s.y[i]; k++; }
+      const sl = (k * sxy - sx * sy) / (k * sxx - sx * sx), ic = (sy - sl * sx) / k;
+      opt = {a: a0, b: b0, unit: c.unit, note: `trend ${sl >= 0 ? '+' : ''}${fmtNum(sl * 10)} ${c.unit || ''} per decade`, th: c.unit === 'degC' || /index|anom|_a$/.test(c.name) ? [{v: 0, label: ''}] : [],
+        series: [{label: c.label || c.name, color: PAL[0], w: .8, t: s.t, y: s.y}, {label: '12-month mean', color: PAL[1], w: 2, t: s.t, y: rm}, {label: 'trend', color: COL.muted, dash: true, t: [a0, b0], y: [ic, ic + sl * (b0 - a0) / Y], noTip: true}]};
+    }
+    w.chart.set(opt);
+    let k = n - 1; while (k > 0 && !(s.y[k] === s.y[k])) k--;
+    setHeader(w, fmtNum(s.y[k], c.unit), s.t[k], id);
+    if (!w.ro) { ro.observe(w.body); w.ro = true; }
+    redraw(w);
+  },
+  async W16(w) {
+    if (!w.chart) {
+      w.v = OCEAN.find(o => hasData(o[0]))[0]; w.chart = new Pane(w.body, (c, W0, Hh) => drawOcean(w, c, W0, Hh)); ro.observe(w.body);
+      w.bar = el('div', {style: 'position:absolute;left:8px;right:8px;bottom:2px;display:flex;gap:6px;align-items:center'}); w.body.append(w.bar);
+    }
+    const e = entry(w.v);
+    w.list = [...((e.files.w1 || []).map(k => ['w1', k])), ...e.files.root.filter(k => /^\d{4}-\d\d-\d\d$/.test(k)).map(k => ['root', k])].sort((p, q) => p[1] < q[1] ? -1 : 1);
+    if (w.idx == null || w.idx >= w.list.length) w.idx = w.list.length - 1;
+    const [tier, key] = w.list[w.idx];
+    [w.g, w.coast] = await Promise.all([RPC('grid', {url: abs(dsUrl(e, tier, key))}), coast()]);
+    w.img = null;
+    const sl = el('input', {type: 'range', min: 0, max: w.list.length - 1, value: w.idx, style: 'flex:1', 'aria-label': 'Map date'});
+    sl.onchange = () => { w.idx = +sl.value; load(w); };
+    w.bar.textContent = '';
+    for (const [id, lab] of OCEAN) if (hasData(id)) w.bar.append(el('button', {'aria-pressed': String(id === w.v), onclick: () => { w.v = id; w.idx = null; load(w); }}, lab));
+    w.bar.append(sl, el('span', {class: 'wa'}, (tier === 'w1' ? 'week of ' : '') + key));
+    const t = w.g.snaps[0].t, d = await loadSeries(w.v, ['global_mean', 'nino34_mean'], t - 4 * D, t + 4 * D, 100, 'r').catch(() => null);
+    const gm = d && nearest(d.cols.global_mean, common_day(t), 2 * D), n34 = d && nearest(d.cols.nino34_mean, common_day(t), 2 * D);
+    const u = (await meta(w.v)).unit;
+    setHeader(w, [gm === gm && gm != null ? `global ${fmtNum(gm, u)}` : '', n34 === n34 && n34 != null ? `Nino 3.4 ${fmtNum(n34, u)}` : ''].filter(Boolean).join(' · '), entry(w.v).newest, w.v);
+    redraw(w);
+  },
+});
+const common_day = t => t - t % D;
+function drawOcean(w, c, W0, Hh) {
+  if (!w.g || !w.coast) return;
+  const g = w.g.grid, v = w.g.snaps[0].v, rng = OCEAN.find(o => o[0] === w.v)[2], div = w.v !== 'ocean.coral-alert';
+  const Wd = Math.min(W0, (Hh - 26) * 2), H2 = Wd / 2, ox = (W0 - Wd) / 2, X = lon => ox + (lon + 180) / 360 * Wd, Y = lat => (90 - lat) / 180 * H2;
+  if (!w.img) {
+    w.img = document.createElement('canvas'); w.img.width = g.nlon; w.img.height = g.nlat;
+    const k = w.img.getContext('2d'), im = k.createImageData(g.nlon, g.nlat);
+    for (let i = 0; i < g.nlat; i++) for (let j = 0; j < g.nlon; j++) {
+      const x = v[i * g.nlon + j], p = ((g.nlat - 1 - i) * g.nlon + j) * 4;
+      const [r, gg, b] = x !== x ? [128, 128, 128] : rdbu(div ? (x / rng + 1) / 2 : .5 + x / rng / 2);
+      im.data[p] = r; im.data[p + 1] = gg; im.data[p + 2] = b; im.data[p + 3] = x !== x ? 0 : 255;
+    }
+    k.putImageData(im, 0, 0);
+  }
+  c.imageSmoothingEnabled = false; c.drawImage(w.img, X(g.lon0 - g.d / 2), Y(g.lat0 + (g.nlat - .5) * g.d), Wd * g.nlon * g.d / 360, H2 * g.nlat * g.d / 180);
+  c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = .6; c.beginPath();
+  for (const l of w.coast) for (let i = 0; i < l.length; i += 2) { const x = X(l[i]), y = Y(l[i + 1]); i && Math.abs(l[i] - l[i - 2]) < 180 ? c.lineTo(x, y) : c.moveTo(x, y); }
+  c.stroke();
+  if (w.v === 'ocean.sst-anom') { c.strokeStyle = '#111'; c.lineWidth = 1.5; c.setLineDash([3, 2]); c.strokeRect(X(-170), Y(5), X(-120) - X(-170), Y(-5) - Y(5)); c.setLineDash([]); }
+  // color bar
+  c.font = '10.5px ' + getComputedStyle(document.body).fontFamily; c.textBaseline = 'middle';
+  for (let i = 0; i < 100; i++) { const [r, gg, b] = rdbu(div ? i / 99 : .5 + i / 198); c.fillStyle = `rgb(${r},${gg},${b})`; c.fillRect(ox + Wd - 110 + i, H2 - 12, 1, 8); }
+  const u = w.v === 'ocean.sla' ? ' m' : w.v === 'ocean.sst-anom' ? ' °C' : '';
+  c.fillStyle = COL.text; c.textAlign = 'right'; c.fillText(div ? -rng + u : '0', ox + Wd - 113, H2 - 8); c.textAlign = 'left'; c.fillText(rng + u, ox + Wd - 8, H2 - 18);
+}
+
+// ---------------------------------------------------------------- catalog, controls
+function renderCatalog() {
+  const c = $('#cat'); c.textContent = '';
+  c.append(el('h2', {}, 'Widgets'), el('button', {onclick: () => toggleCat(false)}, 'Close'));
+  const groups = {};
+  for (const k of catalogKeys()) { const d = defFor(k), e = d.ds[0] && entry(d.ds[0]); (groups[e ? e.domain : 'status'] = groups[e ? e.domain : 'status'] || []).push([k, d]); }
+  for (const [g, list] of Object.entries(groups)) {
+    c.append(el('h3', {}, g));
+    for (const [k, d] of list) {
+      const ok = available(d), cb = el('input', {type: 'checkbox'});
+      cb.checked = LAYOUT.items.some(x => x.k === k); cb.disabled = !ok;
+      cb.onchange = () => cb.checked ? addWidget(k) : removeWidget(k);
+      c.append(el('label', {class: ok ? '' : 'na'}, cb, `${d.type} ${d.title}${ok ? '' : ' (no data)'}`));
+    }
+  }
+  c.append(el('h3', {}, 'Layout'),
+    el('button', {onclick: exportLayout}, 'Export JSON'), ' ',
+    el('button', {onclick: () => $('#imp').click()}, 'Import JSON'),
+    el('input', {type: 'file', id: 'imp', accept: 'application/json', hidden: '', onchange: importLayout}));
+}
+function toggleCat(open) { $('#cat').hidden = !open; $('#catb').setAttribute('aria-expanded', String(open)); if (open) { renderCatalog(); $('#cat button').focus(); } }
+function exportLayout() {
+  const a = el('a', {href: URL.createObjectURL(new Blob([JSON.stringify(LAYOUT, null, 1)], {type: 'application/json'})), download: 'dashboard-layout.json'});
+  document.body.append(a); a.click(); a.remove();
+}
+function importLayout(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  f.text().then(t => { const j = JSON.parse(t); if (!Array.isArray(j.items)) throw new Error('bad file'); LAYOUT = {preset: 'Custom', items: j.items.filter(x => x && typeof x.k === 'string')}; saveLayout(); buildGrid(); renderCatalog(); refreshAll(); })
+    .catch(e => alert('The layout file is not valid: ' + e.message));
+}
+function setRange(s) { S.range = s; S.end = S.live ? null : S.end; ls.set('range', s); drawStrip(); for (const b of $('#ranges').children) b.setAttribute('aria-pressed', String(+b.dataset.s === s)); refreshAll(); }
+function initControls() {
+  for (const [lab, s] of RANGES) $('#ranges').append(el('button', {'data-s': s, 'aria-pressed': String(s === S.range), onclick: () => setRange(s)}, lab));
+  const ps = $('#preset');
+  for (const p of [...Object.keys(PRESETS), 'Custom']) ps.append(el('option', {value: p}, p));
+  ps.onchange = () => { if (ps.value === 'Custom') return; LAYOUT = presetLayout(ps.value); saveLayout(); buildGrid(); refreshAll(); };
+  $('#tz').textContent = S.utc ? 'UTC' : 'Local';
+  $('#tz').onclick = () => { S.utc = !S.utc; ls.set('utc', S.utc); $('#tz').textContent = S.utc ? 'UTC' : 'Local'; refreshAll(); };
+  $('#live').onclick = () => { S.live = !S.live; S.end = now(); $('#live').setAttribute('aria-pressed', String(S.live)); refreshAll(); };
+  $('#catb').onclick = () => toggleCat($('#cat').hidden);
+  const th = ls.get('theme', 'dark'); document.documentElement.dataset.theme = th;
+  $('#themeb').onclick = () => { const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = t; ls.set('theme', t); COL = themeColors(); for (const w of W.values()) { if (w.chart) w.chart.dirtyBase = true; w.base = w.img = null; } redrawAll(); drawStrip(); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#cat').hidden) toggleCat(false); });
+  matchMedia('(max-width:700px)').addEventListener('change', () => { for (const w of W.values()) place(w); });
+  $('#ver').textContent = VERSION;
+}
+
+// ---------------------------------------------------------------- overview strip with a brush (plan 11.5)
+// The strip shows the last 5 years. Drag to select a window. Double-click or Escape returns to live mode.
+function drawStrip() {
+  const [c, W0] = fitCanvas($('#strip')), t1 = now(), t0 = t1 - 5 * Y, x = t => 12 + (t - t0) / (t1 - t0) * (W0 - 24), [a, b] = window_();
+  c.clearRect(0, 0, W0, 22); c.font = '10px ' + getComputedStyle(document.body).fontFamily; c.fillStyle = COL.muted; c.textBaseline = 'top';
+  for (const [t, l] of timeTicks(t0, t1, W0 - 24)) { c.fillRect(x(t), 0, 1, 4); c.fillText(l, x(t) + 2, 6); }
+  c.fillStyle = COL.accent; c.globalAlpha = .35; c.fillRect(x(a), 0, Math.max(2, x(b) - x(a)), 22); c.globalAlpha = 1;
+}
+function initStrip() {
+  const cv = $('#strip'); let d0 = null;
+  const tAt = e => { const r = cv.getBoundingClientRect(), t1 = now(); return t1 - 5 * Y + (e.clientX - r.left - 12) / (r.width - 24) * 5 * Y; };
+  cv.addEventListener('pointerdown', e => { d0 = tAt(e); cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener('pointerup', e => {
+    if (d0 == null) return; const t = Math.min(now(), tAt(e)), a = Math.min(d0, t), b = Math.max(d0, t); d0 = null;
+    if (b - a < H) return;
+    S.range = b - a; S.end = b; S.live = b > now() - 600; $('#live').setAttribute('aria-pressed', String(S.live));
+    for (const x of $('#ranges').children) x.setAttribute('aria-pressed', 'false');
+    refreshAll(); drawStrip(); say('Time window ' + fmtTime(a) + ' to ' + fmtTime(b));
+  });
+  const live = () => { S.live = true; $('#live').setAttribute('aria-pressed', 'true'); setRange(D); drawStrip(); };
+  cv.addEventListener('dblclick', live);
+  cv.addEventListener('keydown', e => { if (e.key === 'Escape') live(); else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { S.live = false; S.end = (S.end || now()) + (e.key === 'ArrowLeft' ? -1 : 1) * S.range / 4; S.end = Math.min(S.end, now()); refreshAll(); drawStrip(); } });
+  new ResizeObserver(drawStrip).observe(cv);
+}
+
+// ---------------------------------------------------------------- manifest and polling
+let pollTimer = 0;
+async function loadManifest(first) {
+  let m;
+  try {
+    const r = await fetch('data/manifest.json', {cache: 'no-cache'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    m = await r.json();
+  } catch (e) {
+    showBanner('The page cannot read data/manifest.json (' + e.message + '). The pipeline has not published data yet, or the site is not reachable.');
+    schedulePoll(5 * 60); return;
+  }
+  const old = S.man; S.man = m;
+  const changed = !old ? null : Object.keys(m.datasets).filter(id => (old.datasets[id] || {}).hash !== m.datasets[id].hash);
+  const age = now() - m.t;
+  if (age > 2 * H) showBanner(`The data was last updated ${fmtAge(age)} ago (${fmtTime(m.t)}). The pipeline can be stopped. The page shows the last data.`);
+  else $('#banner').hidden = true;
+  if (!m.deploy) showBanner('The store is larger than the hard stop. The deploy is stopped.');
+  $('#sum').textContent = `Updated ${fmtTime(m.t)} · ${m.counts.ok || 0} ok, ${m.counts.stale || 0} stale, ${m.counts.error || 0} error`;
+  const att = new Set(); for (const e of Object.values(m.datasets)) if (e.license && e.license !== 'US Government work' && e.bytes) att.add(`${e.attribution} (${e.license})`);
+  $('#attrib').textContent = att.size ? 'Attribution: ' + [...att].join('; ') + '.' : '';
+  if (first) { buildGrid(); }
+  else {
+    for (const w of W.values()) { w.el.hidden = !available(w.def); if (w.def.type === 'W13' || w.def.ds.some(id => changed.includes(id))) { w.loaded = false; if (w.visible) load(w); } }
+  }
+  schedulePoll(Math.max(60, m.t + 35 * 60 - now()));
+}
+function schedulePoll(s) { clearTimeout(pollTimer); pollTimer = setTimeout(() => loadManifest(false), Math.min(s, 3600) * 1000); }
+function showBanner(t) { const b = $('#banner'); b.textContent = t; b.hidden = false; }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.man && now() - S.man.t > 30 * 60) loadManifest(false); });
+setInterval(() => { if (S.live && !document.hidden) for (const w of W.values()) if (w.visible && w.def.type !== 'W13') { w.loaded = false; load(w); } }, 5 * 60 * 1000);
+
+initControls();
+COL = themeColors();
+initStrip();
+loadManifest(true);
+</script>
+</body>
+</html>

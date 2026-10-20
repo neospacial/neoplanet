@@ -22,14 +22,14 @@ Each response is also saved in `samples/`. These files become the test fixtures 
 
 ## How to run
 
-1. Put these files in the repository:
+1. The files are in the repository:
    - `tools/audit/audit.py`
-   - `audit/endpoints.json`
-   - `.github/workflows/phase0-audit.yml`
+   - `tools/audit/endpoints.json`
+   - `.github/workflows/audit.yml`
 2. Optional: add these repository secrets (Settings > Secrets and variables > Actions):
    - `NASA_API_KEY` from https://api.nasa.gov. If it is not set, the audit uses `DEMO_KEY` (low rate limit).
    - `FIRMS_MAP_KEY` from https://firms.modaps.eosdis.nasa.gov/api/map_key/. If it is not set, the audit skips the FIRMS API test. The no-key FIRMS file is tested.
-3. Open Actions > "Phase 0 audit" > Run workflow. Leave the fields blank for a full run (approx. 2 to 5 minutes).
+3. Open Actions > "audit" > Run workflow. Leave the fields blank for a full run (approx. 2 to 5 minutes).
 4. Read the report on the run summary page. Download the artifact `phase0-audit` for `report.json` and `samples/`.
 
 To test one group again, enter prefixes in the "only" field, for example `swpc.,nasa.donki`.
@@ -47,7 +47,7 @@ One full audit uses approx. 5 minutes.
 
 ## Local run
 
-`python3 tools/audit/audit.py --out audit-out` (Python 3.9+, no packages). Many government sites block
+`python3 tools/audit/audit.py --endpoints tools/audit/endpoints.json --out audit-out` (Python 3.9+, no packages). Many government sites block
 cloud IP ranges, so a local run can show failures that do not occur on the runner.
 
 ## After the run
