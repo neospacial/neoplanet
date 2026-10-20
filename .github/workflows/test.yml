@@ -1,0 +1,35 @@
+# Tests (plan 10.3). No network: all tests read fixtures/.
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Unit tests
+        run: python -m unittest discover -s fetch/tests -v
+
+      - name: Offline pipeline run
+        run: |
+          python fetch/run.py --tier all --offline fixtures --now 2026-10-20T18:00:00Z
+          python -c "import json; m = json.load(open('data/manifest.json')); print(m['counts'], m['total_bytes'])"
+
+      - name: Check that no data is committed
+        run: |
+          if git ls-files | grep -E '^(data|_site)/'; then echo "Data files are committed."; exit 1; fi

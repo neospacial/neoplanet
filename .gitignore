@@ -1,0 +1,8 @@
+# Data is never committed (plan 4). The store lives in the Actions cache.
+data/
+_site/
+audit-out/
+__pycache__/
+*.pyc
+.tmp-*
+.DS_Store
